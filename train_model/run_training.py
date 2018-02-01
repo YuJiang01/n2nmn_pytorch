@@ -17,7 +17,7 @@ def run_training(max_iter, dataset_trn):
 
 
         # Part 0 & 1: Run Convnet and generate module layout
-        tokens, entropy_reg_val = None #sess.partial_run(h,
+        #tokens, entropy_reg_val = None #sess.partial_run(h,
         '''(nmn3_model_trn.predicted_tokens, nmn3_model_trn.entropy_reg),
             feed_dict={input_seq_batch: batch['input_seq_batch'],
                        seq_length_batch: batch['seq_length_batch'],
@@ -27,6 +27,8 @@ def run_training(max_iter, dataset_trn):
 
 
         tokens = batch['gt_layout_batch']
+        print("shape of tokens:")
+        print(tokens.shape())
         # Assemble the layout tokens into network structure
         expr_list, expr_validity_array = assembler.assemble(tokens)
         # all exprs should be valid (since they are ground-truth)
