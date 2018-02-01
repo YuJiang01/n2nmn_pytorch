@@ -1,0 +1,1 @@
+/opt/homebrew/bin/../Cellar/python36/3.6.2+_254.20170915/bin/../Frameworks/Python.framework/Versions/3.6
