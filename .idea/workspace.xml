@@ -2,15 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="831d4750-3477-4696-9a66-d0f6d5beaa21" name="Default" comment="">
-      <change beforePath="" afterPath="$PROJECT_DIR$/Utils/build_clevr_imdb.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/Utils/data_reader.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/Utils/text_processing.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/models/layout2Module.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/models/layout_assembler.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/models/module_net.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/train_model/input_parameters.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/train_model/run_training.py" />
-      <change beforePath="" afterPath="$PROJECT_DIR$/train_model/train_clevr_gt_layout.py" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
+      <change beforePath="$PROJECT_DIR$/train_model/run_training.py" afterPath="$PROJECT_DIR$/train_model/run_training.py" />
+      <change beforePath="$PROJECT_DIR$/train_model/train_clevr_gt_layout.py" afterPath="$PROJECT_DIR$/train_model/train_clevr_gt_layout.py" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -65,14 +59,24 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="train_clevr_gt_layout.py" pinned="false" current-in-tab="false">
+      <file leaf-file-name="train_clevr_gt_layout.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/train_model/train_clevr_gt_layout.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="345">
-              <caret line="23" column="0" lean-forward="true" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
+            <state relative-caret-position="150">
+              <caret line="10" column="18" lean-forward="true" selection-start-line="10" selection-start-column="18" selection-end-line="10" selection-end-column="18" />
               <folding>
                 <element signature="e#0#64#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="__init__.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/train_model/__init__.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="0">
+              <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -92,8 +96,8 @@
       <file leaf-file-name="run_training.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/train_model/run_training.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="420">
-              <caret line="28" column="22" lean-forward="false" selection-start-line="28" selection-start-column="17" selection-end-line="28" selection-end-column="22" />
+            <state relative-caret-position="690">
+              <caret line="46" column="28" lean-forward="true" selection-start-line="46" selection-start-column="28" selection-end-line="46" selection-end-column="28" />
               <folding>
                 <element signature="e#0#18#0" expanded="true" />
               </folding>
@@ -111,25 +115,13 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="layout_assembler.py" pinned="false" current-in-tab="true">
+      <file leaf-file-name="layout_assembler.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/models/layout_assembler.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="315">
               <caret line="21" column="23" lean-forward="true" selection-start-line="21" selection-start-column="23" selection-end-line="21" selection-end-column="23" />
               <folding>
                 <element signature="e#0#64#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="build_clevr_imdb.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Utils/build_clevr_imdb.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="727">
-              <caret line="52" column="0" lean-forward="true" selection-start-line="52" selection-start-column="0" selection-end-line="52" selection-end-column="0" />
-              <folding>
-                <element signature="e#0#18#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -169,14 +161,15 @@
         <option value="$PROJECT_DIR$/Utils/data_reader.py" />
         <option value="$PROJECT_DIR$/models/layout_assembler.py" />
         <option value="$PROJECT_DIR$/train_model/input_parameters.py" />
-        <option value="$PROJECT_DIR$/train_model/train_clevr_gt_layout.py" />
-        <option value="$PROJECT_DIR$/train_model/run_training.py" />
         <option value="$PROJECT_DIR$/models/module_net.py" />
+        <option value="$PROJECT_DIR$/train_model/__init__.py" />
+        <option value="$PROJECT_DIR$/train_model/run_training.py" />
+        <option value="$PROJECT_DIR$/train_model/train_clevr_gt_layout.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="46" />
+    <option name="x" value="38" />
     <option name="y" value="38" />
     <option name="width" value="1620" />
     <option name="height" value="939" />
@@ -259,7 +252,7 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="46" y="38" width="1620" height="939" extended-state="0" />
+    <frame x="38" y="38" width="1620" height="939" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
@@ -351,41 +344,11 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/train_model/input_parameters.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="510">
-          <caret line="34" column="21" lean-forward="true" selection-start-line="34" selection-start-column="21" selection-end-line="34" selection-end-column="21" />
-          <folding>
-            <element signature="e#0#64#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/train_model/train_clevr_gt_layout.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="345">
-          <caret line="23" column="0" lean-forward="true" selection-start-line="23" selection-start-column="0" selection-end-line="23" selection-end-column="0" />
-          <folding>
-            <element signature="e#0#64#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/models/module_net.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="0">
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/train_model/run_training.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="420">
-          <caret line="28" column="22" lean-forward="false" selection-start-line="28" selection-start-column="17" selection-end-line="28" selection-end-column="22" />
-          <folding>
-            <element signature="e#0#18#0" expanded="true" />
-          </folding>
         </state>
       </provider>
     </entry>
@@ -403,6 +366,44 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="315">
           <caret line="21" column="23" lean-forward="true" selection-start-line="21" selection-start-column="23" selection-end-line="21" selection-end-column="23" />
+          <folding>
+            <element signature="e#0#64#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train_model/__init__.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="0">
+          <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train_model/input_parameters.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="510">
+          <caret line="34" column="21" lean-forward="true" selection-start-line="34" selection-start-column="21" selection-end-line="34" selection-end-column="21" />
+          <folding>
+            <element signature="e#0#64#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train_model/run_training.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="690">
+          <caret line="46" column="28" lean-forward="true" selection-start-line="46" selection-start-column="28" selection-end-line="46" selection-end-column="28" />
+          <folding>
+            <element signature="e#0#18#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/train_model/train_clevr_gt_layout.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="150">
+          <caret line="10" column="18" lean-forward="true" selection-start-line="10" selection-start-column="18" selection-end-line="10" selection-end-column="18" />
           <folding>
             <element signature="e#0#64#0" expanded="true" />
           </folding>
