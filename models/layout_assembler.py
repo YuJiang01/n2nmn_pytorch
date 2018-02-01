@@ -1,9 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-import tensorflow as tf
-import tensorflow_fold as td
-from tensorflow import convert_to_tensor as to_T
 
 # the number of attention input to each module
 _module_input_num = {

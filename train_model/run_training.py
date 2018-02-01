@@ -1,7 +1,7 @@
 import numpy as np
 import sys
-from models.layout_assembler import Assembler
-from input_parameters import *
+from ..models.layout_assembler import Assembler
+from .input_parameters import *
 
 
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name

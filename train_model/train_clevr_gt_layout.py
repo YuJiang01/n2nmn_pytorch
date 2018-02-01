@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from run_training import *
-from Utils.data_reader import DataReader
+from .run_training import *
+from ..Utils.data_reader import DataReader
 
 data_reader_trn = DataReader(imdb_file_trn, shuffle=True, one_pass=False,
                              batch_size=N,
