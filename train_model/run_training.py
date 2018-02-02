@@ -13,14 +13,14 @@ hidden_size = 512
 learning_rate = 0.01
 
 def train_layout(input_text_seq,input_layout,encoder,decoder,criterion):
-    input_variable = Variable(torch.LongTensor(input_text_seq))
-    target_variable = Variable(torch.LongTensor(input_layout))
+    #input_variable = Variable(torch.LongTensor(input_text_seq))
+    #target_variable = Variable(torch.LongTensor(input_layout))
 
     encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
     decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
 
 
-    loss, decoder_out, decoder_attention = train(input_variable, target_variable, encoder,
+    loss, decoder_out, decoder_attention = train(input_text_seq, input_layout, encoder,
                  decoder, encoder_optimizer, decoder_optimizer, criterion)
 
     return loss, decoder_out, decoder_attention
