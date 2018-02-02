@@ -3,6 +3,8 @@ from __future__ import absolute_import, division, print_function
 from train_model.run_training import *
 from Utils.data_reader import DataReader
 
+
+
 data_reader_trn = DataReader(imdb_file_trn, shuffle=True, one_pass=False,
                              batch_size=N,
                              T_encoder=T_encoder,
@@ -16,6 +18,18 @@ num_vocab_txt = data_reader_trn.batch_loader.vocab_dict.num_vocab
 num_vocab_nmn = len(assembler.module_names)
 num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 
+
+
+
+
+### running the step for attenstionSeq2Seq
+
+hidden_size = 512
+
+myEncoder = EncoderRNN(num_vocab_txt,hidden_size)
+myDecoder = AttnDecoderRNN(hidden_size,num_vocab_nmn)
+
+#trainIters(data_reader_trn,myEncoder,myDecoder,10,2)
 run_training(max_iter, data_reader_trn)
 
 

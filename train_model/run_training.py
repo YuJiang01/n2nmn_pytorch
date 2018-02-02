@@ -3,70 +3,68 @@ import sys
 from models.layout_assembler import Assembler
 from train_model.input_parameters import *
 
+from models.AttensionSeq2Seq import *
 
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name
 
 assembler = Assembler(vocab_layout_file)
 
+hidden_size = 512
+learning_rate = 0.01
+
+def train_layout(input_text_seq,input_layout,encoder,decoder,criterion):
+    input_variable = Variable(torch.LongTensor(input_text_seq))
+    target_variable = Variable(torch.LongTensor(input_layout))
+
+    encoder_optimizer = optim.SGD(encoder.parameters(), lr=learning_rate)
+    decoder_optimizer = optim.SGD(decoder.parameters(), lr=learning_rate)
+
+
+    loss, decoder_out, decoder_attention = train(input_variable, target_variable, encoder,
+                 decoder, encoder_optimizer, decoder_optimizer, criterion)
+
+    return loss, decoder_out, decoder_attention
+
+
+
 def run_training(max_iter, dataset_trn):
     avg_accuracy = 0
     accuracy_decay = 0.99
+
+    ##get the dimension of answer
+
+    num_vocab_txt = dataset_trn.batch_loader.vocab_dict.num_vocab
+    num_vocab_nmn = len(assembler.module_names)
+    num_choices = dataset_trn.batch_loader.answer_dict.num_vocab
+    myEncoder = EncoderRNN(num_vocab_txt, hidden_size)
+    myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn)
+    criterion = nn.NLLLoss()
+
     for n_iter, batch in enumerate(dataset_trn.batches()):
         if n_iter >= max_iter:
             break
 
+        ##consider current model, run sample one by one
 
-        # Part 0 & 1: Run Convnet and generate module layout
-        #tokens, entropy_reg_val = None #sess.partial_run(h,
-        '''(nmn3_model_trn.predicted_tokens, nmn3_model_trn.entropy_reg),
-            feed_dict={input_seq_batch: batch['input_seq_batch'],
-                       seq_length_batch: batch['seq_length_batch'],
-                       image_feat_batch: batch['image_feat_batch'],
-                       gt_layout_batch: batch['gt_layout_batch']})'''
+        _, n_sample = batch['input_seq_batch'].shape
 
+        n_correct_layout = 0
+        for i_sample in range(n_sample):
 
+            input_text_seq_len = batch['seq_length_batch'][i_sample]
+            input_text_seq = batch['input_seq_batch'][:input_text_seq_len, i_sample]
+            input_image_feat = batch['image_feat_batch'][i_sample,:,:,:]
+            input_layout = batch['gt_layout_batch'][:,i_sample]
 
-        tokens = batch['gt_layout_batch']
-        print("shape of tokens:")
-        print(tokens.shape())
-        # Assemble the layout tokens into network structure
-        expr_list, expr_validity_array = assembler.assemble(tokens)
-        # all exprs should be valid (since they are ground-truth)
-        assert(np.all(expr_validity_array))
+            loss, decoder_out, decoder_attention= train_layout(input_text_seq,input_layout,myEncoder,myDecoder,criterion)
+            if (np.array(decoder_out) == input_layout).all():
+                n_correct_layout += 1
 
-        labels = batch['answer_label_batch']
-        # Build TensorFlow Fold input for NMN
-        expr_feed = None #compiler.build_feed_dict(expr_list)
-        #expr_feed[expr_validity_batch] = None#expr_validity_array
-        #expr_feed[answer_label_batch] = None #labels
+        mini_batch_accuracy = n_correct_layout/n_sample
 
-        # Part 2: Run NMN and learning steps
-        scores_val, avg_sample_loss_val, _ = None #sess.partial_run(
-           # h, (scores, avg_sample_loss, train_step), feed_dict=expr_feed)
+        print("iter: %d accuracy:%f",n_iter,mini_batch_accuracy)
+        sys.stdout.flush()
 
-        # compute accuracy
-        predictions = np.argmax(scores_val, axis=1)
-        accuracy = np.mean(np.logical_and(expr_validity_array,
-                                          predictions == labels))
-        avg_accuracy += (1-accuracy_decay) * (accuracy-avg_accuracy)
-        validity = np.mean(expr_validity_array)
-
-        # Add to TensorBoard summary
-        if (n_iter+1) % log_interval == 0 or (n_iter+1) == max_iter:
-            print("iter = %d\n\tloss = %f, accuracy (cur) = %f, "
-                  "accuracy (avg) = %f, entropy = %f, validity = %f" %
-                  (n_iter+1, avg_sample_loss_val, accuracy,
-                   avg_accuracy, -entropy_reg_val, validity))
-            sys.stdout.flush()
-
-            summary = None
-            '''sess.run(log_step_trn, {
-                loss_ph: avg_sample_loss_val,
-                entropy_ph: -entropy_reg_val,
-                accuracy_ph: avg_accuracy,
-                # baseline_ph: sess.run(baseline),
-                validity_ph: validity})'''
-            #log_writer.add_summary(summary, n_iter+1)
 
         # Save snapshot
         if (n_iter+1) % snapshot_interval == 0 or (n_iter+1) == max_iter:
