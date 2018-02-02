@@ -68,7 +68,7 @@ def run_training(max_iter, dataset_trn):
             input_layout = batch['gt_layout_batch'][:,i_sample]
 
             loss, decoder_out, decoder_attention= train_layout(input_text_seq,input_layout,myEncoder,myDecoder,criterion)
-            if (np.array(decoder_out) == input_layout).all():
+            if decoder_out == input_layout.tolist():
                 n_correct_layout += 1
 
         mini_batch_accuracy = n_correct_layout/n_sample
