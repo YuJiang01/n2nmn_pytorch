@@ -2,6 +2,9 @@ import numpy as np
 import sys
 from models.layout_assembler import Assembler
 from train_model.input_parameters import *
+import torch
+
+use_cuda = torch.cuda.is_available()
 
 from models.AttensionSeq2Seq import *
 
@@ -39,6 +42,10 @@ def run_training(max_iter, dataset_trn):
     myEncoder = EncoderRNN(num_vocab_txt, hidden_size)
     myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn)
     criterion = nn.NLLLoss()
+
+    if use_cuda:
+        myEncoder = myEncoder.cuda()
+        myDecoder = myDecoder.cuda()
 
     for n_iter, batch in enumerate(dataset_trn.batches()):
         if n_iter >= max_iter:
