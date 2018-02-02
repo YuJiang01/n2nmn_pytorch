@@ -7,6 +7,7 @@ import queue
 import numpy as np
 
 from Utils import text_processing
+from test_helper.replace_path import replace_to_my_mac
 
 class BatchLoaderClevr:
     def __init__(self, imdb, data_params):
@@ -35,7 +36,7 @@ class BatchLoaderClevr:
             print('imdb does not contain ground-truth layout')
 
         # load one feature map to peek its size
-        feats = np.load(self.imdb[0]['feature_path'])
+        feats = np.load(replace_to_my_mac(self.imdb[0]['feature_path']))
         self.feat_H, self.feat_W, self.feat_D = feats.shape[1:]
 
     def load_one_batch(self, sample_ids):
@@ -55,8 +56,8 @@ class BatchLoaderClevr:
             seq_length = len(question_inds)
             input_seq_batch[:seq_length, n] = question_inds
             seq_length_batch[n] = seq_length
-            image_feat_batch[n:n+1] = np.load(iminfo['feature_path'])
-            image_path_list[n] = iminfo['image_path']
+            image_feat_batch[n:n+1] = np.load(replace_to_my_mac(iminfo['feature_path']))
+            image_path_list[n] = replace_to_my_mac(iminfo['image_path'])
             if self.load_answer:
                 answer_idx = self.answer_dict.word2idx(iminfo['answer'])
                 answer_label_batch[n] = answer_idx
