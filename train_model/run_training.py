@@ -47,6 +47,8 @@ def run_training(max_iter, dataset_trn):
         myEncoder = myEncoder.cuda()
         myDecoder = myDecoder.cuda()
 
+    n_correct_total = 0
+    n_total = 0
     for n_iter, batch in enumerate(dataset_trn.batches()):
         if n_iter >= max_iter:
             break
@@ -54,6 +56,8 @@ def run_training(max_iter, dataset_trn):
         ##consider current model, run sample one by one
 
         _, n_sample = batch['input_seq_batch'].shape
+
+        n_total += n_sample
 
         n_correct_layout = 0
         for i_sample in range(n_sample):
@@ -68,9 +72,12 @@ def run_training(max_iter, dataset_trn):
                 n_correct_layout += 1
 
         mini_batch_accuracy = n_correct_layout/n_sample
+        n_correct_total += n_correct_layout
+        avg_accuracy = n_correct_total/n_total
 
-        print("iter: %d accuracy:%f",n_iter,mini_batch_accuracy)
-        sys.stdout.flush()
+        if n_iter % 50 ==0:
+            print("iter:",n_iter, " cur_accuracy:" ,mini_batch_accuracy," avg_accuracy:",avg_accuracy)
+            sys.stdout.flush()
 
 
         # Save snapshot
