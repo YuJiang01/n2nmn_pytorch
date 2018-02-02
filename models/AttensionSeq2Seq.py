@@ -83,12 +83,12 @@ def train(input_text_seq, input_layout, encoder, decoder, encoder_optimizer, dec
     encoder_optimizer.zero_grad()
     decoder_optimizer.zero_grad()
 
-    input_variable = Variable(torch.LongTensor(input_text_seq))
+    input_variable = Variable(torch.LongTensor(input_text_seq).view(-1, 1))
     input_variable = input_variable.cuda() if use_cuda else input_variable
 
-    target_variable = Variable(torch.LongTensor(input_layout))
+    target_variable = Variable(torch.LongTensor(input_layout).view(-1, 1))
     target_variable = target_variable.cuda() if use_cuda else target_variable
-    
+
     input_length = input_variable.size()[0]
     target_length = target_variable.size()[0]
 
