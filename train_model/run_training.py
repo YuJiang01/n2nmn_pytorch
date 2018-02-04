@@ -78,7 +78,7 @@ def run_training(max_iter, dataset_trn):
         myOptimizer.step()
 
         ##compute accuracy
-        predicted_layouts = torch.topk(myLayouts, 1)[1].data.numpy()
+        predicted_layouts = torch.topk(myLayouts, 1)[1].cpu().data.numpy()
         for i in range(n_sample):
             x1 = predicted_layouts[:,i,0].tolist()
             x2 = input_layouts[:,i].tolist()
@@ -97,5 +97,5 @@ def run_training(max_iter, dataset_trn):
         # Save snapshot
         if (n_iter+1) % snapshot_interval == 0 or (n_iter+1) == max_iter:
             snapshot_file = os.path.join(snapshot_dir, "%08d" % (n_iter+1))
-            
+
             print('snapshot saved to ' + snapshot_file)
