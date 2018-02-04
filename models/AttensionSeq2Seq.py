@@ -72,7 +72,7 @@ class AttnDecoderRNN(nn.Module):
 
         ## (batch,out_len,hidden_size) * (batch,hidden_size,seq_len) => (batch,out_len,seq_len)
         attention = torch.bmm(output,encoder_outputs)
-        attention = F.softmax(attention.view(-1,seq_len)).view(batch_size,-1,seq_len)
+        attention = F.softmax(attention.view(-1,seq_len),dim=1).view(batch_size,-1,seq_len)
 
         ##(batch,hidden_size,seq_len)-->(batch,seq_len,hidden_size)
         encoder_outputs = encoder_outputs.permute(0,2,1)

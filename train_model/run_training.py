@@ -89,7 +89,7 @@ def run_training(max_iter, dataset_trn):
         n_correct_total += n_correct_layout
         avg_accuracy = n_correct_total/n_total
 
-        if n_iter % 1 ==50:
+        if n_iter % 50 ==0:
             print("iter:",n_iter, " cur_accuracy:" ,mini_batch_accuracy," avg_accuracy:",avg_accuracy)
             sys.stdout.flush()
 
