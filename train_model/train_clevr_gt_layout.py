@@ -68,8 +68,8 @@ n_correct_total = 0
 n_total = 0
 loss = 0
 
-for n_iter, batch in enumerate(data_reader_trn.batches()):
-    if n_iter >= max_iter:
+for i_iter, batch in enumerate(data_reader_trn.batches()):
+    if i_iter >= max_iter:
         break
 
     ##consider current model, run sample one by one
@@ -110,13 +110,13 @@ for n_iter, batch in enumerate(data_reader_trn.batches()):
     n_correct_total += n_correct_layout
     avg_accuracy = n_correct_total / n_total
 
-    if (n_iter + 1) % log_interval == 0:
-        print("iter:", n_iter, " cur_accuracy:", mini_batch_accuracy, " avg_accuracy:", avg_accuracy)
+    if (i_iter + 1) % log_interval == 0 or i_iter < 10:
+        print("iter:", i_iter, " cur_accuracy:", mini_batch_accuracy, " avg_accuracy:", avg_accuracy)
         sys.stdout.flush()
 
     # Save snapshot
-    if (n_iter + 1) % snapshot_interval == 0 or (n_iter + 1) == max_iter:
-        snapshot_file = os.path.join(snapshot_dir, "%08d" % (n_iter + 1))
+    if (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
+        snapshot_file = os.path.join(snapshot_dir, "%08d" % (i_iter + 1))
         torch.save(mySeq2seq, snapshot_file)
         print('snapshot saved to ' + snapshot_file)
 
