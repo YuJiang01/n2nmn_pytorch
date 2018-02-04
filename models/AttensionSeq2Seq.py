@@ -91,7 +91,7 @@ class AttnDecoderRNN(nn.Module):
         output = output.permute(1,0,2)
 
         ##
-        output = F.softmax(self.out(output))
+        output = F.softmax(self.out(output),dim = 2)
         return output, hidden, attention
 
     def initHidden(self,batch_size):
