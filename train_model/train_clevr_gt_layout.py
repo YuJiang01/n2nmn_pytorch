@@ -115,7 +115,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         sys.stdout.flush()
 
     # Save snapshot
-    if (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
+    if i_iter < 10 or (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
         snapshot_file = os.path.join(snapshot_dir, "%08d" % (i_iter + 1))
         torch.save(mySeq2seq, snapshot_file)
         print('snapshot saved to ' + snapshot_file)
