@@ -12,21 +12,23 @@ EOS_token = 1
 MAX_LENGTH = 500
 
 class EncoderRNN(nn.Module):
-    def __init__(self, input_size, hidden_size):
+    def __init__(self, input_size, hidden_size,num_layers=1):
         super(EncoderRNN, self).__init__()
         self.hidden_size = hidden_size
+        self.num_layers = num_layers
 
         self.embedding = nn.Embedding(input_size, hidden_size)
-        self.gru = nn.GRU(hidden_size, hidden_size)
+        self.lstm = nn.LSTM(hidden_size, hidden_size)
 
-    def forward(self, input, hidden):
-        embedded = self.embedding(input).view(1, 1, -1)
-        output = embedded
-        output, hidden = self.gru(output, hidden)
-        return output, hidden
+    def forward(self, input_seqs, input_seq_lens, hidden):
+        embedded = self.embedding(input_seqs)
+        #packed = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_seq_lens)
+        outputs, hidden = self.lstm(embedded)
+        #outputs, output_lengths = torch.nn.utils.rnn.pad_packed_sequence(outputs)
+        return outputs, hidden
 
-    def initHidden(self):
-        result = Variable(torch.zeros(1, 1, self.hidden_size))
+    def initHidden(self,batch_size):
+        result = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
         if use_cuda:
             return result.cuda()
         else:
@@ -34,40 +36,66 @@ class EncoderRNN(nn.Module):
 
 
 class AttnDecoderRNN(nn.Module):
-    def __init__(self, hidden_size, output_size, dropout_p=0.1, max_length=MAX_LENGTH):
+    def __init__(self, hidden_size, output_size, dropout_p=0.1,num_layers = 1):
         super(AttnDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.dropout_p = dropout_p
-        self.max_length = max_length
+        self.max_length = output_size
+        self.num_layers = num_layers
 
         self.embedding = nn.Embedding(self.output_size, self.hidden_size)
         self.attn = nn.Linear(self.hidden_size * 2, self.max_length)
         self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
         self.dropout = nn.Dropout(self.dropout_p)
-        self.gru = nn.GRU(self.hidden_size, self.hidden_size)
+        self.lstm = nn.LSTM(self.hidden_size, self.hidden_size)
         self.out = nn.Linear(self.hidden_size, self.output_size)
 
-    def forward(self, input, hidden, encoder_outputs):
-        embedded = self.embedding(input).view(1, 1, -1)
+
+    def forward(self, target_variable, hidden, encoder_outputs):
+        embedded = self.embedding(target_variable)
         embedded = self.dropout(embedded)
 
-        attn_weights = F.softmax(
-            self.attn(torch.cat((embedded[0], hidden[0]), 1)), dim=1)
-        attn_applied = torch.bmm(attn_weights.unsqueeze(0),
-                                 encoder_outputs.unsqueeze(0))
+        seq_len = encoder_outputs.size(0)
+        batch_size = encoder_outputs.size(1)
+        hidden_size = encoder_outputs.size(2)
 
-        output = torch.cat((embedded[0], attn_applied[0]), 1)
-        output = self.attn_combine(output).unsqueeze(0)
+        ##step1 run LSTM to get decoder hidden state
+        output, hidden = self.lstm(embedded, hidden)
 
-        output = F.relu(output)
-        output, hidden = self.gru(output, hidden)
+        ##step2: use function in Eq(2) of the paper to compute attention
+        ##(seq_len,batch,hidden_size) -->(batch,hidden_size,seq_len)
+        encoder_outputs = encoder_outputs.permute(1,2,0)
 
-        output = F.log_softmax(self.out(output[0]), dim=1)
-        return output, hidden, attn_weights
+        ##(out_len,batch,hidden_size) --> (batch,out_len,hidden_size)
+        output = output.permute(1,0,2)
 
-    def initHidden(self):
-        result = Variable(torch.zeros(1, 1, self.hidden_size))
+        ## (batch,out_len,hidden_size) * (batch,hidden_size,seq_len) => (batch,out_len,seq_len)
+        attention = torch.bmm(output,encoder_outputs)
+        attention = F.softmax(attention.view(-1,seq_len)).view(batch_size,-1,seq_len)
+
+        ##(batch,hidden_size,seq_len)-->(batch,seq_len,hidden_size)
+        encoder_outputs = encoder_outputs.permute(0,2,1)
+
+        ##(batch,out_len,seq_len) * (batch,seq_len,hidden_size) --> (batch,out_len,hidden_size)
+        mix = torch.bmm(attention,encoder_outputs)
+
+
+        ##(batch,out_len,hidden_size*2)
+        combined = torch.cat((mix,output),dim=2)
+
+        ##(batch,out_len,hidden_size)
+        output = F.tanh(self.attn_combine(combined.view(-1,2*hidden_size))).view(batch_size,-1,hidden_size)
+
+        ##(batch,out_len,hidden_size) ->(out_len,batch,hidden_size)
+        output = output.permute(1,0,2)
+
+        ##
+        output = F.softmax(self.out(output))
+        return output, hidden, attention
+
+    def initHidden(self,batch_size):
+        result = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
         if use_cuda:
             return result.cuda()
         else:
@@ -75,78 +103,20 @@ class AttnDecoderRNN(nn.Module):
 
 
 
-teacher_forcing_ratio = 0.5
 
-def train(input_text_seq, input_layout, encoder, decoder, encoder_optimizer, decoder_optimizer, criterion, max_length=MAX_LENGTH):
-    encoder_hidden = encoder.initHidden()
 
-    encoder_optimizer.zero_grad()
-    decoder_optimizer.zero_grad()
+class attention_seq2seq(nn.Module):
+    def __init__(self,encoder,decoder):
+        super(attention_seq2seq,self).__init__()
+        self.encoder = encoder
+        self.decoder = decoder
 
-    input_variable = Variable(torch.LongTensor(input_text_seq))
-    input_variable = input_variable.cuda() if use_cuda else input_variable
+    def forward(self, input_seqs,input_seq_lens,target_variable):
+        encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
+        encoder_outputs,encoder_hidden = self.encoder(input_seqs,input_seq_lens,encoder_hidden)
+        decoder_results,encoder_hidden,attention = self.decoder(target_variable,encoder_hidden,encoder_outputs)
+        return decoder_results,attention
 
-    target_variable = Variable(torch.LongTensor(input_layout))
-    target_variable = target_variable.cuda() if use_cuda else target_variable
-
-    input_length = input_variable.size()[0]
-    target_length = target_variable.size()[0]
-
-    encoder_outputs = Variable(torch.zeros(max_length, encoder.hidden_size))
-    encoder_outputs = encoder_outputs.cuda() if use_cuda else encoder_outputs
-
-    loss = 0
-
-    for ei in range(input_length):
-        encoder_output, encoder_hidden = encoder(
-            input_variable[ei], encoder_hidden)
-        encoder_outputs[ei] = encoder_output[0][0]
-
-    decoder_input = Variable(torch.LongTensor([[SOS_token]]))
-    decoder_input = decoder_input.cuda() if use_cuda else decoder_input
-
-    decoder_hidden = encoder_hidden
-
-    use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
-
-    decoder_sequence =[]
-    decoder_attentions=[]
-
-    if use_teacher_forcing:
-        # Teacher forcing: Feed the target as the next input
-        for di in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs)
-            loss += criterion(decoder_output, target_variable[di])
-            decoder_input = target_variable[di]  # Teacher forcing
-            topv, topi = decoder_output.data.topk(1)
-            ni = topi[0][0]
-            decoder_sequence.append(ni)
-            decoder_attentions.append(decoder_attention)
-
-    else:
-        # Without teacher forcing: use its own predictions as the next input
-        for di in range(target_length):
-            decoder_output, decoder_hidden, decoder_attention = decoder(
-                decoder_input, decoder_hidden, encoder_outputs)
-            topv, topi = decoder_output.data.topk(1)
-            ni = topi[0][0]
-
-            decoder_input = Variable(torch.LongTensor([[ni]]))
-            decoder_input = decoder_input.cuda() if use_cuda else decoder_input
-            decoder_attentions.append(decoder_attention)
-
-            loss += criterion(decoder_output, target_variable[di])
-            decoder_sequence.append(ni)
-            if ni == EOS_token:
-                break
-
-    loss.backward()
-
-    encoder_optimizer.step()
-    decoder_optimizer.step()
-
-    return loss.data[0] / target_length , decoder_sequence , decoder_attentions
 
 
 
