@@ -19,7 +19,7 @@ W_feat = 15
 D_feat = 512
 embed_dim_txt = 300
 embed_dim_nmn = 300
-lstm_dim = 512
+hidden_size = 512
 num_layers = 2
 encoder_dropout = False
 decoder_dropout = False
@@ -33,13 +33,13 @@ prune_filter_module = True
 weight_decay = 5e-6
 baseline_decay = 0.99
 max_grad_l2_norm = 10
-max_iter = 50000
-snapshot_interval = 5000
+max_iter = 50
+snapshot_interval = 10
 exp_name = "clevr_gt_layout"
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name
 
 # Log params
-log_interval = 20
+log_interval = 5
 log_dir = './exp_clevr/tb/%s/' % exp_name
 
 # Data files
@@ -49,4 +49,8 @@ vocab_answer_file = './exp_clevr/data/answers_clevr.txt'
 
 imdb_file_trn = './exp_clevr/data/imdb/imdb_trn.npy'
 imdb_file_tst = './exp_clevr/data/imdb/imdb_val.npy'
+
+
+##snapshot directory name
+snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name
 
