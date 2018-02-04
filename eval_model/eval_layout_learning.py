@@ -14,3 +14,4 @@ for i_iter in range(500):
     if os.path.exists(snapshot_file):
         accuracy,_, total = run_eval(exp_name, snapshot_name, dataSplitSet)
         eval_results.append((i_iter,accuracy,total))
+        print("iter:", i_iter,"\taccuracy:", accuracy, "\ttotal:", total)
