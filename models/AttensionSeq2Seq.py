@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch import optim
 import random
+import numpy as np
 
 use_cuda = torch.cuda.is_available()
 SOS_token = 0
@@ -50,13 +51,14 @@ class AttnDecoderRNN(nn.Module):
         self.out = nn.Linear(self.hidden_size, self.output_size)
 
 
-    def forward(self, target_variable, hidden, encoder_outputs):
+    def forward(self, target_variable, hidden, encoder_outputs,encoder_lens = None):
         embedded = self.embedding(target_variable)
         embedded = self.dropout(embedded)
 
         seq_len = encoder_outputs.size(0)
         batch_size = encoder_outputs.size(1)
         hidden_size = encoder_outputs.size(2)
+        out_len = embedded.size(0)
 
         ##step1 run LSTM to get decoder hidden state
         output, hidden = self.lstm(embedded, hidden)
@@ -70,6 +72,14 @@ class AttnDecoderRNN(nn.Module):
 
         ## (batch,out_len,hidden_size) * (batch,hidden_size,seq_len) => (batch,out_len,seq_len)
         attention = torch.bmm(output,encoder_outputs)
+
+
+        ##mask the end of the question
+        if encoder_lens is not None:
+            mask = np.ones((batch_size,out_len,seq_len))
+            for i,v in enumerate(encoder_lens):
+                mask[i,:,0:v] = 0
+            attention.data.masked_fill_(torch.ByteTensor(mask), -float('inf'))
 
         attention = F.softmax(attention.view(-1,seq_len), dim=1).view(batch_size,-1,seq_len)
 
@@ -113,7 +123,7 @@ class attention_seq2seq(nn.Module):
     def forward(self, input_seqs,input_seq_lens,target_variable):
         encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
         encoder_outputs, encoder_hidden = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
-        decoder_results, encoder_hidden, attention = self.decoder(target_variable, encoder_hidden,encoder_outputs)
+        decoder_results, encoder_hidden, attention = self.decoder(target_variable, encoder_hidden,encoder_outputs,input_seq_lens)
         return decoder_results,attention
 
 
