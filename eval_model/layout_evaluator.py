@@ -98,12 +98,13 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
 
 
             # Assemble the layout tokens into network structure
-            #expr_list, expr_validity_array = assembler.assemble(predicted_layouts)
-            #layout_valid += np.sum(expr_validity_array)
+            expr_list, expr_validity_array = assembler.assemble(predicted_layouts)
+
+            layout_valid_total += np.sum(expr_validity_array)
 
         answer_accuracy = answer_correct_total / num_questions_total
         layout_accuracy = layout_correct_total / num_questions_total
-        #layout_validity = layout_valid / num_questions
+        layout_validity = layout_valid_total / num_questions_total
 
 
 

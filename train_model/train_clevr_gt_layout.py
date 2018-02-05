@@ -40,10 +40,6 @@ num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 
 ### running the step for attenstionSeq2Seq
 
-
-myEncoder = EncoderRNN(num_vocab_txt,hidden_size)
-myDecoder = AttnDecoderRNN(hidden_size,num_vocab_nmn)
-
 avg_accuracy = 0
 accuracy_decay = 0.99
 
@@ -66,7 +62,6 @@ mySeq2seq = mySeq2seq.cuda() if use_cuda else mySeq2seq
 
 n_correct_total = 0
 n_total = 0
-loss = 0
 
 for i_iter, batch in enumerate(data_reader_trn.batches()):
     if i_iter >= max_iter:
@@ -78,6 +73,8 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     input_text_seq_lens = batch['seq_length_batch']
     input_text_seqs = batch['input_seq_batch']
     input_layouts = batch['gt_layout_batch']
+    input_images = batch['image_feat_batch']
+    input_answers = batch['answer_label_batch']
 
     n_total += n_sample
 
@@ -95,11 +92,16 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     myLayouts, myAttentions = mySeq2seq(input_variable, input_text_seq_lens, target_variable)
 
     # Get loss
-    loss = 0
+    layout_loss = 0
     for step, step_output in enumerate(myLayouts):
-        loss += criterion(step_output.view(n_sample, -1), target_variable[step, :])
+        layout_loss += criterion(step_output.view(n_sample, -1), target_variable[step, :])
 
-    loss.backward()
+
+    ## get the layout information
+    expr_list, expr_validity_array = assembler.assemble(predicted_layouts)
+
+
+    layout_loss.backward()
     myOptimizer.step()
 
     ##compute accuracy

@@ -14,7 +14,7 @@ class module_net(nn.Module):
         self.fc1 = nn.Linear(16 * 5 * 5,120)
         self.fc2 = nn.Linear(120,self.output_dim)
 
-    def forward(self, input_image,input_text, expr_list):
+    def forward(self, input_image_variable,input_text_attention_variable, target_answer_variable, expr_list,expr_validity):
         input_image = self.pool(F.relu(self.conv1(input_image)))
         input_image = input_image.view(-1, 16 * 5 * 5)
         input_image = F.relu(self.fc1(input_image))
