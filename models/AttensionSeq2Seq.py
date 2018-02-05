@@ -79,7 +79,9 @@ class AttnDecoderRNN(nn.Module):
             mask = np.ones((batch_size,out_len,seq_len))
             for i,v in enumerate(encoder_lens):
                 mask[i,:,0:v] = 0
-            attention.data.masked_fill_(torch.ByteTensor(mask), -float('inf'))
+            mask_tensor = torch.ByteTensor(mask)
+            mask_tensor = mask_tensor.cuda() if use_cuda else mask_tensor
+            attention.data.masked_fill_(mask_tensor, -float('inf'))
 
         attention = F.softmax(attention.view(-1,seq_len), dim=1).view(batch_size,-1,seq_len)
 
