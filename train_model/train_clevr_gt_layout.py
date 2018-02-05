@@ -110,12 +110,12 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     n_correct_total += n_correct_layout
     avg_accuracy = n_correct_total / n_total
 
-    if (i_iter + 1) % log_interval == 0 or i_iter < 10:
+    if (i_iter + 1) % log_interval == 0 or i_iter < 50:
         print("iter:", i_iter, " cur_accuracy:", mini_batch_accuracy, " avg_accuracy:", avg_accuracy)
         sys.stdout.flush()
 
     # Save snapshot
-    if i_iter < 10 or (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
+    if i_iter < 50 or (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
         snapshot_file = os.path.join(snapshot_dir, "%08d" % (i_iter + 1))
         torch.save(mySeq2seq, snapshot_file)
         print('snapshot saved to ' + snapshot_file)
