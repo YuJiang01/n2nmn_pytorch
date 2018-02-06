@@ -83,7 +83,7 @@ class AttnDecoderRNN(nn.Module):
             mask_tensor = mask_tensor.cuda() if use_cuda else mask_tensor
             attention.data.masked_fill_(mask_tensor, -float('inf'))
 
-        attention = F.softmax(attention.view(-1,seq_len), dim=1).view(batch_size,-1,seq_len)
+        attention = F.softmax(attention.view(-1,seq_len), dim=1).view(batch_size,-1,seq_len) ##(batch,out_len,seq_len)
 
         ##(batch,hidden_size,seq_len)-->(batch,seq_len,hidden_size)
         encoder_outputs = encoder_outputs.permute(0,2,1)
@@ -99,11 +99,11 @@ class AttnDecoderRNN(nn.Module):
         output = F.tanh(self.attn_combine(combined.view(-1,2*hidden_size))).view(batch_size,-1,hidden_size)
 
         ##(batch,out_len,hidden_size) ->(out_len,batch,hidden_size)
-        output = output.permute(1,0,2)
+        output = output.permute(1, 0, 2)
 
         ##
         output = F.softmax(self.out(output),dim = 2)
-        return output, hidden, attention
+        return output, hidden, mix
 
     def initHidden(self,batch_size):
         result = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))

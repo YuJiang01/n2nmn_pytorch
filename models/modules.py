@@ -35,7 +35,7 @@ class FindModule(nn.Module):
         self.conv2 = nn.Conv2d(map_dim, 1, kernel_size=1)
         self.textfc = nn.Linear(text_dim,map_dim)
 
-    def forward(self, input_image_feat, input_text):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         image_mapped = self.conv1(input_image_feat)  #(N, map_dim, H, W)
         text_mapped = self.textfc(input_text).view(-1, self.map_dim,1,1).expand_as(image_mapped)
         elmtwize_mult = image_mapped * text_mapped
@@ -51,9 +51,9 @@ class FilterModule(nn.Module):
         self.andModule = andModule
         self.findModule = findModule
 
-    def forward(self,input_image_attention ,input_image_feat, input_text):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         find_result = self.findModule(input_image_feat,input_text)
-        att_grid = self.andModule(input_image_attention,find_result)
+        att_grid = self.andModule(input_image_attention1,find_result)
         return att_grid
 
 
@@ -68,7 +68,7 @@ class FindSamePropertyModule(nn.Module):
         self.conv1 = nn.Conv2d(image_dim, map_dim, kernel_size=1)
         self.conv2 = nn.Conv2d(map_dim, 1, kernel_size=1)
 
-    def forward(self, input_image_attention1, input_image_feat,input_text):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[1:3]
         att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
         image_reshape = input_image_feat.view(-1,self.image_dim,H * W)
@@ -95,8 +95,8 @@ class TransformModule(nn.Module):
         self.conv2 = nn.Conv2d(map_dim, 1, kernel_size=1)
         self.textfc = nn.Linear(text_dim,map_dim)
 
-    def forward(self, input_image_attention, input_text):
-        image_att_mapped = self.conv1(input_image_attention)  #(N, map_dim, H, W)
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
+        image_att_mapped = self.conv1(input_image_attention1)  #(N, map_dim, H, W)
         text_mapped = self.textfc(input_text).view(-1, self.map_dim,1,1).expand_as(image_att_mapped)
         elmtwize_mult = image_att_mapped * text_mapped
         elmtwize_mult = F.normalize(elmtwize_mult, p=2, dim=1) #(N, map_dim, H, W)
@@ -108,15 +108,15 @@ class AndModule(nn.Module):
     def __init__(self):
         super(AndModule,self).__init__()
 
-    def forward(self, attention1, attention2):
-        return torch.max(attention1, attention2)
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
+        return torch.max(input_image_attention1, input_image_attention2)
 
 
 class OrModule(nn.Module):
     def __init__(self):
         super(OrModule,self).__init__()
-    def forward(self, attention1, attention2):
-        return torch.min(attention1, attention2)
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
+        return torch.min(input_image_attention1, input_image_attention2)
 
 
 
@@ -126,9 +126,9 @@ class CountModule(nn.Module):
         self.out_num_choice = output_num_choice
         self.lc_out = nn.Linear(image_height*image_width + 3, self.out_num_choice)
 
-    def forward(self, input_image_attention):
-        H, W = input_image_attention.shape[1:3]
-        att_all = input_image_attention.view(-1, H*W) ##flatten attention to [N, H*W]
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
+        H, W = input_image_attention1.shape[1:3]
+        att_all = input_image_attention1.view(-1, H*W) ##flatten attention to [N, H*W]
         att_avg = torch.mean(att_all,1)
         att_min = torch.min(att_all, 1)
         att_max = torch.max(att_all,1)
@@ -145,9 +145,9 @@ class ExistModule(nn.Module):
         self.out_num_choice = output_num_choice
         self.lc_out = nn.Linear(image_height*image_width + 3, self.out_num_choice)
 
-    def forward(self, input_image_attention):
-        H, W = input_image_attention.shape[1:3]
-        att_all = input_image_attention.view(-1, H*W) ##flatten attention to [N, H*W]
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
+        H, W = input_image_attention1.shape[1:3]
+        att_all = input_image_attention1.view(-1, H*W) ##flatten attention to [N, H*W]
         att_avg = torch.mean(att_all, 1)
         att_min = torch.min(att_all, 1)
         att_max = torch.max(att_all, 1)
@@ -162,7 +162,7 @@ class EqualNumModule(nn.Module):
         self.out_num_choice = output_num_choice
         self.lc_out = nn.Linear(image_height*image_width *2 + 6, self.out_num_choice)
 
-    def forward(self, input_image_attention1,input_image_attention2):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[1:3]
         att1_all = input_image_attention1.view(-1, H * W) ##flatten attention to [N, H*W]
         att1_avg = torch.mean(att1_all, 1)
@@ -184,7 +184,7 @@ class MoreNumModule(nn.Module):
         self.out_num_choice = output_num_choice
         self.lc_out = nn.Linear(image_height * image_width * 2 + 6, self.out_num_choice)
 
-    def forward(self, input_image_attention1, input_image_attention2):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[1:3]
         att1_all = input_image_attention1.view(-1, H * W)  ##flatten attention to [N, H*W]
         att1_avg = torch.mean(att1_all, 1)
@@ -206,7 +206,7 @@ class LessNumModule(nn.Module):
         self.out_num_choice = output_num_choice
         self.lc_out = nn.Linear(image_height * image_width * 2 + 6, self.out_num_choice)
 
-    def forward(self, input_image_attention1, input_image_attention2):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[1:3]
         att1_all = input_image_attention1.view(-1, H * W)  ##flatten attention to [N, H*W]
         att1_avg = torch.mean(att1_all, 1)
@@ -232,7 +232,7 @@ class SamePropertyModule(nn.Module):
         self.att_fc_2 = nn.Linear(image_dim, map_dim)
         self.lc_out = nn.Linear(map_dim, self.out_num_choice)
 
-    def forward(self, input_image_attention1, input_image_attention2, input_image_feat,input_text):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[1:3]
         att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
         att_softmax_2 = F.softmax(input_image_attention2.view(-1, H * W), dim=1)
@@ -258,7 +258,7 @@ class DescribeModule(nn.Module):
         self.att_fc_1 = nn.Linear(image_dim, map_dim)
         self.lc_out = nn.Linear(map_dim, self.out_num_choice)
 
-    def forward(self, input_image_attention1, input_image_feat,input_text):
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[1:3]
         att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
         image_reshape = input_image_feat.view(-1,self.image_dim,H * W)

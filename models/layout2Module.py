@@ -2,23 +2,23 @@
 from models.modules import *
 
 layout2module = {
-    '_Filter': FilterModule,
-    '_FindSameProperty': FindSamePropertyModule,
-    '_Transform': TransformModule,
-    '_And': AndModule,
-    '_Or': OrModule,
+    '_Filter': self.FilterModule,
+    '_FindSameProperty': self.FindSamePropertyModule,
+    '_Transform': self.TransformModule,
+    '_And': self.AndModule,
+    '_Or': self.OrModule,
 
-    '_Count': CountModule,
-    '_Exist': ExistModule,
-    '_EqualNum': EqualNumModule,
-    '_MoreNum': MoreNumModule,
-    '_LessNum': LessNumModule,
+    '_Count': self.CountModule,
+    '_Exist': self.ExistModule,
+    '_EqualNum': self.EqualNumModule,
+    '_MoreNum': self.MoreNumModule,
+    '_LessNum': self.LessNumModule,
 
-    '_SameProperty': SamePropertyModule,
+    '_SameProperty': self.SamePropertyModule,
 
-    '_Describe': DescribeModule,
+    '_Describe': self.DescribeModule,
 
 
-    '_Scene': SceneModule,
-    '_Find': FindModule
+    '_Scene': self.SceneModule,
+    '_Find': self.FindModule
 }
