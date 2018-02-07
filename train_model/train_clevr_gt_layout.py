@@ -142,8 +142,9 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
             #print("iter:", i_iter, " isample:" ,i_sample)
             ith_answer_variable = input_answers_variable[i_sample]
             ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
-
-            textAttention = torch.index_select(myAttentions, dim=0,index = Variable(torch.LongTensor([i_sample])))
+            text_index = Variable(torch.LongTensor([i_sample]))
+            text_index = text_index.cuda() if use_cuda else text_index
+            textAttention = torch.index_select(myAttentions, dim=0,index=text_index)
             layout_exp = expr_list[i_sample]
 
             image_index = Variable(torch.LongTensor([i_sample]))
