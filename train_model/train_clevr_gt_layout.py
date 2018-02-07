@@ -145,7 +145,10 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
             textAttention = torch.index_select(myAttentions, dim=0,index = Variable(torch.LongTensor([i_sample])))
             layout_exp = expr_list[i_sample]
-            ith_images_variable = torch.index_select(input_images_variable, dim=0,index = Variable(torch.LongTensor([i_sample])))
+
+            image_index = Variable(torch.LongTensor([i_sample]))
+            image_index = image_index.cuda() if use_cuda else image_index
+            ith_images_variable = torch.index_select(input_images_variable, dim=0,index=image_index)
             #.view(1,D_feat,H_feat,W_feat)
             myAnswers = myModuleNet(input_image_variable = ith_images_variable,
                                     input_text_attention_variable =textAttention,

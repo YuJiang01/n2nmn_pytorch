@@ -5,6 +5,7 @@ from models.modules import *
 from torch.autograd import Variable
 
 
+use_cuda = torch.cuda.is_available()
 
 
 
@@ -70,8 +71,10 @@ class module_net(nn.Module):
     def recursively_assemble_network(self,input_image_variable, input_text_attention_variable,expr_list):
         current_module = self.layout2module[expr_list['module']]
         time_idx = expr_list['time_idx']
+        text_index = Variable(torch.LongTensor([time_idx]))
+        text_index = text_index.cuda() if use_cuda else text_index
         text_at_time = torch.index_select(input_text_attention_variable, dim=1,
-                                          index=Variable(torch.LongTensor([time_idx]))).view(-1,self.in_text_dim)
+                                          index=text_index).view(-1,self.in_text_dim)
 
         input_0 = None
         input_1 = None
