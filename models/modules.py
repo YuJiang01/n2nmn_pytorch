@@ -15,19 +15,10 @@ attention [N,1,H,W]
 '''
 
 
-class SceneModule(nn.Module):
 
+class SceneModule(nn.Module):
     def __init__(self):
         super(SceneModule,self).__init__()
-
-    def forward(self, x):
-        grid = torch.ones(x.size())
-        return grid
-
-
-class SceneModule(nn.Module):
-    def __init__(self):
-        super(FindModule,self).__init__()
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         N, _, H, W = input_image_feat.shape
