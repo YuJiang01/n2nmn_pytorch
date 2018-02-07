@@ -34,13 +34,13 @@ prune_filter_module = True
 weight_decay = 5e-6
 baseline_decay = 0.99
 max_grad_l2_norm = 10
-max_iter = 500
-snapshot_interval = 1000
+max_iter = 80000
+snapshot_interval = 10000
 exp_name = "clevr_gt_layout"
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name
 
 # Log params
-log_interval = 10
+log_interval = 50
 log_dir = './exp_clevr/tb/%s/' % exp_name
 
 # Data files
