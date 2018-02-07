@@ -20,6 +20,7 @@ class module_net(nn.Module):
         self.in_text_dim = in_text_dim
         self.out_num_choices = out_num_choices
         self.map_dim = map_dim
+        self.SceneModule = SceneModule()
         self.FindModule = FindModule(image_dim=in_image_dim,text_dim=in_text_dim,map_dim= map_dim)
         self.TransformModule = TransformModule(image_dim=in_image_dim, text_dim=in_text_dim,map_dim = map_dim)
         self.AndModule = AndModule()
@@ -62,9 +63,9 @@ class module_net(nn.Module):
             '_LessNum': self.LessNumModule,
             '_SameProperty': self.SamePropertyModule,
             '_Describe': self.DescribeModule,
-            '_Find': self.FindModule
+            '_Find': self.FindModule,
+            '_Scene': self.SceneModule
         }
-        self.conv1 = nn.Conv2d(in_image_dim, map_dim, kernel_size=1)
 
     #text[N, D_text]
 
@@ -95,7 +96,6 @@ class module_net(nn.Module):
 
         ##for now assume batch_size = 1
         result = self.recursively_assemble_network(input_image_variable,input_text_attention_variable,expr_list)
-        #result = self.conv1(input_image_variable)
 
         return result
 
