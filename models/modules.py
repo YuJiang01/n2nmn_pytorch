@@ -2,7 +2,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.autograd import Variable
 
+use_cuda = torch.cuda.is_available()
 
 
 '''
@@ -21,6 +23,18 @@ class SceneModule(nn.Module):
     def forward(self, x):
         grid = torch.ones(x.size())
         return grid
+
+
+class SceneModule(nn.Module):
+    def __init__(self, image_dim, text_dim, map_dim):
+        super(FindModule,self).__init__()
+
+    def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
+        N, _, H, W = input_image_feat.shape
+        res = torch.ones((N, 1, H, W))
+        att_grid = Variable(res)
+        att_grid = att_grid.cuda() if use_cuda else att_grid
+        return att_grid
 
 
 class FindModule(nn.Module):

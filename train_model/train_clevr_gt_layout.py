@@ -179,7 +179,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     if (i_iter + 1) % log_interval == 0 :
         print("iter:", i_iter,
-              " cur_layout_accuracy:", current_layout_accuracy, " avg_layout_accuracy:", avg_accuracy,
+              " cur_layout_accuracy:", current_layout_accuracy, " avg_layout_accuracy:", avg_layout_accuracy,
               " cur_ans_accuracy:" , current_answer_accuracy, " avg_answer_accuracy:", avg_answer_accuracy)
         sys.stdout.flush()
 
