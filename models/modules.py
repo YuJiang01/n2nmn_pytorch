@@ -8,7 +8,7 @@ import torch.nn.functional as F
 '''
 NOTE: in all modules, 
 image_feat [N,D_image,H,W]
-text [N,1,D_text]
+text [N,D_text]
 attention [N,1,H,W]
 '''
 
@@ -52,8 +52,8 @@ class FilterModule(nn.Module):
         self.findModule = findModule
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        find_result = self.findModule(input_image_feat,input_text)
-        att_grid = self.andModule(input_image_attention1,find_result)
+        find_result = self.findModule(input_image_feat,input_text,input_image_attention1,input_image_attention2)
+        att_grid = self.andModule(input_image_feat,input_text,input_image_attention1,find_result)
         return att_grid
 
 
@@ -69,13 +69,13 @@ class FindSamePropertyModule(nn.Module):
         self.conv2 = nn.Conv2d(map_dim, 1, kernel_size=1)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
         image_reshape = input_image_feat.view(-1,self.image_dim,H * W)
         att_feat_1 = torch.sum(att_softmax_1 * image_reshape, dim=2)    #[N, image_dim]
-        att_feat_1_mapped = self.att_fc_1(att_feat_1).view(-1, 1, 1,self.map_dim)       #[N, map_dim]
+        att_feat_1_mapped = self.att_fc_1(att_feat_1).view(-1, self.map_dim,1,1)       #[N, map_dim,1,1]
 
-        text_mapped = self.text_fc(input_text).view(-1, 1, 1,self.map_dim)
+        text_mapped = self.text_fc(input_text).view(-1,self.map_dim,1,1)
 
         image_mapped = self.conv1(input_image_feat)  # (N, map_dim, H, W)
 
@@ -91,7 +91,7 @@ class TransformModule(nn.Module):
     def __init__(self, image_dim, text_dim, map_dim,kernel_size=5, padding=2):
         super(TransformModule,self).__init__()
         self.map_dim = map_dim
-        self.conv1 = nn.Conv2d(image_dim, map_dim, kernel_size=kernel_size, padding=padding)
+        self.conv1 = nn.Conv2d(1, map_dim, kernel_size=kernel_size, padding=padding)
         self.conv2 = nn.Conv2d(map_dim, 1, kernel_size=1)
         self.textfc = nn.Linear(text_dim,map_dim)
 
@@ -127,11 +127,11 @@ class CountModule(nn.Module):
         self.lc_out = nn.Linear(image_height*image_width + 3, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att_all = input_image_attention1.view(-1, H*W) ##flatten attention to [N, H*W]
-        att_avg = torch.mean(att_all,1)
-        att_min = torch.min(att_all, 1)
-        att_max = torch.max(att_all,1)
+        att_avg = torch.mean(att_all, 1, keepdim=True)
+        att_min = torch.min(att_all, 1, keepdim=True)[0]
+        att_max = torch.max(att_all,1, keepdim=True)[0]
         att_concat = torch.cat((att_all, att_avg, att_min, att_max), 1)
         scores = self.lc_out(att_concat)
         return scores
@@ -146,11 +146,11 @@ class ExistModule(nn.Module):
         self.lc_out = nn.Linear(image_height*image_width + 3, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att_all = input_image_attention1.view(-1, H*W) ##flatten attention to [N, H*W]
-        att_avg = torch.mean(att_all, 1)
-        att_min = torch.min(att_all, 1)
-        att_max = torch.max(att_all, 1)
+        att_avg = torch.mean(att_all, 1, keepdim=True)
+        att_min = torch.min(att_all, 1, keepdim=True)[0]
+        att_max = torch.max(att_all, 1, keepdim=True)[0]
         att_concat = torch.cat((att_all, att_avg, att_min, att_max), 1)
         scores = self.lc_out(att_concat)
         return scores
@@ -163,16 +163,16 @@ class EqualNumModule(nn.Module):
         self.lc_out = nn.Linear(image_height*image_width *2 + 6, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att1_all = input_image_attention1.view(-1, H * W) ##flatten attention to [N, H*W]
-        att1_avg = torch.mean(att1_all, 1)
-        att1_min = torch.min(att1_all, 1)
-        att1_max = torch.max(att1_all, 1)
+        att1_avg = torch.mean(att1_all, 1, keepdim=True)
+        att1_min = torch.min(att1_all, 1, keepdim=True)[0]
+        att1_max = torch.max(att1_all, 1, keepdim=True)[0]
 
         att2_all = input_image_attention2.view(-1, H * W)  ##flatten attention to [N, H*W]
-        att2_avg = torch.mean(att2_all, 1)
-        att2_min = torch.min(att2_all, 1)
-        att2_max = torch.max(att2_all, 1)
+        att2_avg = torch.mean(att2_all, 1, keepdim=True)
+        att2_min = torch.min(att2_all, 1, keepdim=True)[0]
+        att2_max = torch.max(att2_all, 1, keepdim=True)[0]
 
         att_concat = torch.cat((att1_all, att1_avg, att1_min, att1_max,att2_all, att2_avg, att2_min, att2_max), 1)
         scores = self.lc_out(att_concat)
@@ -185,16 +185,16 @@ class MoreNumModule(nn.Module):
         self.lc_out = nn.Linear(image_height * image_width * 2 + 6, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att1_all = input_image_attention1.view(-1, H * W)  ##flatten attention to [N, H*W]
-        att1_avg = torch.mean(att1_all, 1)
-        att1_min = torch.min(att1_all, 1)
-        att1_max = torch.max(att1_all, 1)
+        att1_avg = torch.mean(att1_all, 1, keepdim=True)
+        att1_min = torch.min(att1_all, 1, keepdim=True)[0]
+        att1_max = torch.max(att1_all, 1, keepdim=True)[0]
 
         att2_all = input_image_attention2.view(-1, H * W)  ##flatten attention to [N, H*W]
-        att2_avg = torch.mean(att2_all, 1)
-        att2_min = torch.min(att2_all, 1)
-        att2_max = torch.max(att2_all, 1)
+        att2_avg = torch.mean(att2_all, 1, keepdim=True)
+        att2_min = torch.min(att2_all, 1, keepdim=True)[0]
+        att2_max = torch.max(att2_all, 1, keepdim=True)[0]
 
         att_concat = torch.cat((att1_all, att1_avg, att1_min, att1_max, att2_all, att2_avg, att2_min, att2_max), 1)
         scores = self.lc_out(att_concat)
@@ -207,16 +207,16 @@ class LessNumModule(nn.Module):
         self.lc_out = nn.Linear(image_height * image_width * 2 + 6, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att1_all = input_image_attention1.view(-1, H * W)  ##flatten attention to [N, H*W]
-        att1_avg = torch.mean(att1_all, 1)
-        att1_min = torch.min(att1_all, 1)
-        att1_max = torch.max(att1_all, 1)
+        att1_avg = torch.mean(att1_all, 1, keepdim=True)
+        att1_min = torch.min(att1_all, 1, keepdim=True)[0]
+        att1_max = torch.max(att1_all, 1, keepdim=True)[0]
 
         att2_all = input_image_attention2.view(-1, H * W)  ##flatten attention to [N, H*W]
-        att2_avg = torch.mean(att2_all, 1)
-        att2_min = torch.min(att2_all, 1)
-        att2_max = torch.max(att2_all, 1)
+        att2_avg = torch.mean(att2_all, 1, keepdim=True)
+        att2_min = torch.min(att2_all, 1, keepdim=True)[0]
+        att2_max = torch.max(att2_all, 1, keepdim=True)[0]
 
         att_concat = torch.cat((att1_all, att1_avg, att1_min, att1_max, att2_all, att2_avg, att2_min, att2_max), 1)
         scores = self.lc_out(att_concat)
@@ -233,7 +233,7 @@ class SamePropertyModule(nn.Module):
         self.lc_out = nn.Linear(map_dim, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
+        H, W = input_image_attention1.shape[2:4]
         att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
         att_softmax_2 = F.softmax(input_image_attention2.view(-1, H * W), dim=1)
         image_reshape = input_image_feat.view(-1,self.image_dim,H * W)
@@ -259,9 +259,9 @@ class DescribeModule(nn.Module):
         self.lc_out = nn.Linear(map_dim, self.out_num_choice)
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        H, W = input_image_attention1.shape[1:3]
-        att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
-        image_reshape = input_image_feat.view(-1,self.image_dim,H * W)
+        H, W = input_image_attention1.shape[2:4]
+        att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1).view(-1, 1, H*W)
+        image_reshape = input_image_feat.view(-1,self.image_dim,H * W) #[N,image_dim,H*W]
         att_feat_1 = torch.sum(att_softmax_1 * image_reshape, dim=2)    #[N, image_dim]
         att_feat_1_mapped = self.att_fc_1(att_feat_1)       #[N, map_dim]
 

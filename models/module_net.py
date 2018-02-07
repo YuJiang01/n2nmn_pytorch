@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from models.modules import *
+from torch.autograd import Variable
 
 
 
@@ -62,31 +63,36 @@ class module_net(nn.Module):
             '_Describe': self.DescribeModule,
             '_Find': self.FindModule
         }
+        self.conv1 = nn.Conv2d(in_image_dim, map_dim, kernel_size=1)
 
-    #text[N, 1, D_text]
+    #text[N, D_text]
 
     def recursively_assemble_network(self,input_image_variable, input_text_attention_variable,expr_list):
         current_module = self.layout2module[expr_list['module']]
         time_idx = expr_list['time_idx']
-        text_at_time = input_text_attention_variable[:,time_idx,:]
+        text_at_time = torch.index_select(input_text_attention_variable, dim=1,
+                                          index=Variable(torch.LongTensor([time_idx]))).view(-1,self.in_text_dim)
 
         input_0 = None
         input_1 = None
 
         if 'input_0' in expr_list:
-            input_0 = self.recursively_assemble_network(input_image_variable, input_text_attention_variable, expr_list['input_0'])
+            input_0 = self.recursively_assemble_network(input_image_variable,
+                                                        input_text_attention_variable, expr_list['input_0'])
         if 'input_1' in expr_list:
             input_1 = self.recursively_assemble_network(input_image_variable, input_text_attention_variable,
-                                                        expr_list['input_0'])
+                                                        expr_list['input_1'])
 
-        return current_module(input_image_variable, text_at_time, input_0, input_1)
+        res = current_module(input_image_variable, text_at_time, input_0, input_1)
+        return res
 
 
     def forward(self, input_image_variable, input_text_attention_variable, target_answer_variable, expr_list, expr_validity):
 
+
         ##for now assume batch_size = 1
         result = self.recursively_assemble_network(input_image_variable,input_text_attention_variable,expr_list)
-
+        #result = self.conv1(input_image_variable)
 
         return result
 

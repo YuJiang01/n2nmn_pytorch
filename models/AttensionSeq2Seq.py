@@ -12,6 +12,7 @@ EOS_token = 1
 
 MAX_LENGTH = 500
 
+
 class EncoderRNN(nn.Module):
     def __init__(self, input_size, hidden_size,num_layers=1):
         super(EncoderRNN, self).__init__()
@@ -89,11 +90,11 @@ class AttnDecoderRNN(nn.Module):
         encoder_outputs = encoder_outputs.permute(0,2,1)
 
         ##(batch,out_len,seq_len) * (batch,seq_len,hidden_size) --> (batch,out_len,hidden_size)
-        mix = torch.bmm(attention,encoder_outputs)
+        mix = torch.bmm(attention, encoder_outputs)
 
 
         ##(batch,out_len,hidden_size*2)
-        combined = torch.cat((mix,output),dim=2)
+        combined = torch.cat((mix,output), dim=2)
 
         ##(batch,out_len,hidden_size)
         output = F.tanh(self.attn_combine(combined.view(-1,2*hidden_size))).view(batch_size,-1,hidden_size)
@@ -102,7 +103,7 @@ class AttnDecoderRNN(nn.Module):
         output = output.permute(1, 0, 2)
 
         ##
-        output = F.softmax(self.out(output),dim = 2)
+        output = F.softmax(self.out(output), dim=2)
         return output, hidden, mix
 
     def initHidden(self,batch_size):
@@ -117,8 +118,8 @@ class AttnDecoderRNN(nn.Module):
 
 
 class attention_seq2seq(nn.Module):
-    def __init__(self,encoder,decoder):
-        super(attention_seq2seq,self).__init__()
+    def __init__(self, encoder, decoder):
+        super(attention_seq2seq, self).__init__()
         self.encoder = encoder
         self.decoder = decoder
 

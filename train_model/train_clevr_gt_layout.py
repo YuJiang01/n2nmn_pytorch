@@ -41,8 +41,6 @@ num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 
 ### running the step for attenstionSeq2Seq
 
-avg_accuracy = 0
-accuracy_decay = 0.99
 
 
 num_vocab_txt = data_reader_trn.batch_loader.vocab_dict.num_vocab
@@ -53,7 +51,7 @@ myEncoder = EncoderRNN(num_vocab_txt, hidden_size, num_layers)
 myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn, 0.1, num_layers)
 
 criterion = nn.NLLLoss()
-criterion_answer = nn.NLLLoss()
+criterion_answer = nn.CrossEntropyLoss()
 
 if use_cuda:
     myEncoder = myEncoder.cuda()
@@ -66,11 +64,17 @@ mySeq2seq = mySeq2seq.cuda() if use_cuda else mySeq2seq
 myModuleNet = module_net(image_height= H_feat, image_width = W_feat, in_image_dim=D_feat,
                          in_text_dim=embed_dim_txt, out_num_choices= num_choices, map_dim=hidden_size)
 
-answerOptimizer = optim.Adam(myModuleNet.parameters())
-answerOptimizer.zero_grad()
+myModuleNet = myModuleNet.cuda() if use_cuda else myModuleNet
 
-n_correct_total = 0
+answerOptimizer = optim.Adam(myModuleNet.parameters())
+
+
+avg_accuracy = 0
+accuracy_decay = 0.99
+
+n_correct_layout_total = 0
 n_total = 0
+n_correct_answer_total = 0
 
 for i_iter, batch in enumerate(data_reader_trn.batches()):
     if i_iter >= max_iter:
@@ -88,6 +92,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     n_total += n_sample
 
     n_correct_layout = 0
+    n_correct_answer = 0
 
     input_variable = Variable(torch.LongTensor(input_text_seqs))
     input_variable = input_variable.cuda() if use_cuda else input_variable
@@ -105,7 +110,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     for step, step_output in enumerate(myLayouts):
         layout_loss += criterion(step_output.view(n_sample, -1), target_variable[step, :])
 
-    layout_loss.backward()
+    layout_loss.backward(retain_graph=True)
     myOptimizer.step()
 
     ##compute accuracy
@@ -119,45 +124,68 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     input_answers_variable = Variable(torch.LongTensor(input_answers))
     input_answers_variable = input_answers_variable.cuda() if use_cuda else input_answers_variable
 
-    input_images_variable = Variable(torch.LongTensor(input_images))
+    input_images_variable = Variable(torch.FloatTensor(input_images))
     input_images_variable = input_images_variable.cuda() if use_cuda else input_images_variable
+
+    ##image[batch_size, H_feat, W_feat, D_feat] ==> [batch_size, D_feat, W_feat, H_feat] for conv2d
+    input_images_variable = input_images_variable.permute(0,3,1,2)
+
+
+
+    answer_loss = 0
     ## for the first step, train sample one by one
     for i_sample in range(n_sample):
+
         ##skip the case when expr is not validity
         if expr_validity_array[i_sample]:
+            answerOptimizer.zero_grad()
+            #print("iter:", i_iter, " isample:" ,i_sample)
             ith_answer_variable = input_answers_variable[i_sample]
-            textAttention = myAttentions
+            ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
+
+            textAttention = torch.index_select(myAttentions, dim=0,index = Variable(torch.LongTensor([i_sample])))
             layout_exp = expr_list[i_sample]
-            ith_images_variable = input_images_variable[i_sample, :, :, :]
+            ith_images_variable = torch.index_select(input_images_variable, dim=0,index = Variable(torch.LongTensor([i_sample])))
+            #.view(1,D_feat,H_feat,W_feat)
             myAnswers = myModuleNet(input_image_variable = ith_images_variable,
-                                    input_text_attention_variable = textAttention,
+                                    input_text_attention_variable =textAttention,
                                     target_answer_variable = ith_answer_variable,
-                                    expr_list = layout_exp,expr_validity=expr_validity_array[i_sample])
+                                    expr_list=layout_exp,expr_validity=expr_validity_array[i_sample])
+
+            answer_loss = criterion_answer(myAnswers,ith_answer_variable)
+            current_answer = torch.topk(myAnswers, 1)[1].cpu().data.numpy()
+            if current_answer[0, 0] == input_answers[i_sample]:
+                n_correct_answer += 1
+            answer_loss.backward(retain_graph=True)
+            answerOptimizer.step()
 
 
 
 
-    #myAnswers = myModuleNet(input_images_variable, myAttentions,input_answers_variable,expr_list,expr_validity_array)
 
-    #answer_loss = criterion_answer(myAnswers, input_answers_variable)
 
-    #answer_loss.backward()
-    #answerOptimizer.step()
 
-    n_correct_layout += np.sum(np.all(predicted_layouts == input_layouts, axis=0))
-    mini_batch_accuracy = n_correct_layout / n_sample
-    n_correct_total += n_correct_layout
-    avg_accuracy = n_correct_total / n_total
+    current_layout_accuracy = n_correct_layout/n_sample
+    n_correct_layout_total += n_correct_layout
+    avg_layout_accuracy = n_correct_layout_total / n_total
 
-    if (i_iter + 1) % log_interval == 0 or i_iter < 50 :
-        print("iter:", i_iter, " cur_accuracy:", mini_batch_accuracy, " avg_accuracy:", avg_accuracy)
+    current_answer_accuracy = n_correct_answer/n_sample
+    n_correct_answer_total += n_correct_answer
+    avg_answer_accuracy =  n_correct_answer_total/n_total
+
+    if (i_iter + 1) % log_interval == 0 :
+        print("iter:", i_iter,
+              " cur_layout_accuracy:", current_layout_accuracy, " avg_layout_accuracy:", avg_accuracy,
+              " cur_ans_accuracy:" , current_answer_accuracy, " avg_answer_accuracy:", avg_answer_accuracy)
         sys.stdout.flush()
 
     # Save snapshot
     if  (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
-        snapshot_file = os.path.join(snapshot_dir, "%08d" % (i_iter + 1))
-        torch.save(mySeq2seq, snapshot_file)
-        print('snapshot saved to ' + snapshot_file)
+        layout_snapshot_file = os.path.join(snapshot_dir, " seq2seq_%08d" % (i_iter + 1))
+        torch.save(mySeq2seq, layout_snapshot_file)
+        module_snapshot_file = os.path.join(snapshot_dir, " module_%08d" % (i_iter + 1))
+        torch.save(myModuleNet, module_snapshot_file)
+        print('snapshot saved to ' + layout_snapshot_file + "and " +module_snapshot_file)
 
 
 
