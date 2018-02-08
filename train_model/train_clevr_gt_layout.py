@@ -182,9 +182,9 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     if (i_iter + 1) % log_interval == 0 :
         print("iter:", i_iter,
-              " cur_layout_accuracy:", current_layout_accuracy, " avg_layout_accuracy:", avg_layout_accuracy,
-              " cur_ans_accuracy:" , current_answer_accuracy, " avg_answer_accuracy:", avg_answer_accuracy,
-              " layout_loss:", layout_loss.data, "answer_loss:", answer_loss.data)
+              " cur_layout_accuracy:%.3f"% current_layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
+              " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy,
+              " layout_loss:%.3f"% layout_loss.data.numpy()[0], "answer_loss: %.3f"% answer_loss.data.numpy()[0])
         sys.stdout.flush()
 
     # Save snapshot
