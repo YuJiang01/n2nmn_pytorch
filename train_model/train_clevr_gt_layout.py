@@ -7,7 +7,8 @@ from models.layout_assembler import Assembler
 from train_model.input_parameters import *
 import torch
 import numpy as np
-from models.module_net import  module_net
+from models.module_net import module_net
+from Utils.utils import unique_columns
 
 use_cuda = torch.cuda.is_available()
 
@@ -133,8 +134,31 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
 
     answer_loss = 0
+    ##select the samples with the same predicted layouts and train together
+
+    sample_groups_by_layout = unique_columns(predicted_layouts)
+
+    for sample_group in sample_groups_by_layout:
+        first_in_group = sample_group[0]
+        if expr_validity_array[first_in_group]:
+            layout_exp = expr_list[first_in_group]
+            ith_answer_variable = input_answers_variable[sample_group]
+            ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
+            textAttention = myAttentions[sample_group, :]
+            ith_images_variable = input_images_variable[sample_group,:]
+            myAnswers = myModuleNet(input_image_variable=ith_images_variable,
+                                    input_text_attention_variable=textAttention,
+                                    target_answer_variable=ith_answer_variable,
+                                    expr_list=layout_exp)
+            answer_loss += criterion_answer(myAnswers, ith_answer_variable)
+
+            current_answer = torch.topk(myLayouts, 1)[1].cpu().data.numpy()[:, :, 0]
+            n_correct_layout += np.sum(np.all(current_answer == input_answers[sample_group], axis=0))
+
+
+
     ## for the first step, train sample one by one
-    for i_sample in range(n_sample):
+    '''for i_sample in range(n_sample):
 
         ##skip the case when expr is not validity
         if expr_validity_array[i_sample]:
@@ -161,7 +185,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
             if current_answer[0, 0] == input_answers[i_sample]:
                 n_correct_answer += 1
             #answer_loss.backward(retain_graph=True)
-            #answerOptimizer.step()
+            #answerOptimizer.step()'''
 
     total_loss = layout_loss+ answer_loss
     total_loss.backward()

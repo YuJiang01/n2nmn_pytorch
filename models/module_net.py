@@ -91,7 +91,7 @@ class module_net(nn.Module):
         return res
 
 
-    def forward(self, input_image_variable, input_text_attention_variable, target_answer_variable, expr_list, expr_validity):
+    def forward(self, input_image_variable, input_text_attention_variable, target_answer_variable, expr_list):
 
 
         ##for now assume batch_size = 1
