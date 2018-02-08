@@ -110,8 +110,8 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     for step, step_output in enumerate(myLayouts):
         layout_loss += criterion(step_output.view(n_sample, -1), target_variable[step, :])
 
-    layout_loss.backward(retain_graph=True)
-    myOptimizer.step()
+    #layout_loss.backward(retain_graph=True)
+    #myOptimizer.step()
 
     ##compute accuracy
     predicted_layouts = torch.topk(myLayouts, 1)[1].cpu().data.numpy()[:, :, 0]
@@ -156,14 +156,17 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
                                     target_answer_variable = ith_answer_variable,
                                     expr_list=layout_exp,expr_validity=expr_validity_array[i_sample])
 
-            answer_loss = criterion_answer(myAnswers,ith_answer_variable)
+            answer_loss += criterion_answer(myAnswers,ith_answer_variable)
             current_answer = torch.topk(myAnswers, 1)[1].cpu().data.numpy()
             if current_answer[0, 0] == input_answers[i_sample]:
                 n_correct_answer += 1
-            answer_loss.backward(retain_graph=True)
-            answerOptimizer.step()
+            #answer_loss.backward(retain_graph=True)
+            #answerOptimizer.step()
 
-
+    total_loss = layout_loss+ answer_loss
+    total_loss.backward()
+    myOptimizer.step()
+    answerOptimizer.step()
 
 
 
@@ -180,7 +183,8 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     if (i_iter + 1) % log_interval == 0 :
         print("iter:", i_iter,
               " cur_layout_accuracy:", current_layout_accuracy, " avg_layout_accuracy:", avg_layout_accuracy,
-              " cur_ans_accuracy:" , current_answer_accuracy, " avg_answer_accuracy:", avg_answer_accuracy)
+              " cur_ans_accuracy:" , current_answer_accuracy, " avg_answer_accuracy:", avg_answer_accuracy,
+              " layout_loss:", layout_loss.data, "answer_loss:", answer_loss.data)
         sys.stdout.flush()
 
     # Save snapshot
