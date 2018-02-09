@@ -140,6 +140,8 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     for sample_group in sample_groups_by_layout:
         if sample_group.shape ==0: continue
+
+        answerOptimizer.zero_grad()
         first_in_group = sample_group[0]
         if expr_validity_array[first_in_group]:
             layout_exp = expr_list[first_in_group]
@@ -168,7 +170,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
             current_answer = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:,0]
 
-            n_correct_answer += np.sum(np.all(current_answer == input_answers[sample_group], axis=0))
+            n_correct_answer += np.sum(current_answer == input_answers[sample_group])
 
 
 
@@ -220,7 +222,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     avg_answer_accuracy =  n_correct_answer_total/n_total
 
     if (i_iter + 1) % log_interval == 0 :
-        print("iter:", i_iter,
+        print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% current_layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
               " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy)
               #" layout_loss:%.3f"% layout_loss.cpu().data.numpy()[0], "answer_loss: %.3f"% answer_loss.cpu().data.numpy()[0])

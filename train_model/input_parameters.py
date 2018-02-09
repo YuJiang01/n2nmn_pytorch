@@ -40,7 +40,7 @@ exp_name = "clevr_gt_layout"
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name
 
 # Log params
-log_interval = 50
+log_interval = 100
 log_dir = './exp_clevr/tb/%s/' % exp_name
 
 # Data files
