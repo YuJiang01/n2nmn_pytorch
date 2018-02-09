@@ -122,14 +122,14 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     ## get the layout information
     expr_list, expr_validity_array = assembler.assemble(predicted_layouts)
 
-    input_answers_variable = Variable(torch.LongTensor(input_answers))
-    input_answers_variable = input_answers_variable.cuda() if use_cuda else input_answers_variable
+    #input_answers_variable = Variable(torch.LongTensor(input_answers))
+    #input_answers_variable = input_answers_variable.cuda() if use_cuda else input_answers_variable
 
-    input_images_variable = Variable(torch.FloatTensor(input_images))
-    input_images_variable = input_images_variable.cuda() if use_cuda else input_images_variable
+    #input_images_variable = Variable(torch.FloatTensor(input_images))
+    #input_images_variable = input_images_variable.cuda() if use_cuda else input_images_variable
 
     ##image[batch_size, H_feat, W_feat, D_feat] ==> [batch_size, D_feat, W_feat, H_feat] for conv2d
-    input_images_variable = input_images_variable.permute(0,3,1,2)
+    #input_images_variable = input_images_variable.permute(0,3,1,2)
 
 
 
@@ -139,21 +139,36 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     sample_groups_by_layout = unique_columns(predicted_layouts)
 
     for sample_group in sample_groups_by_layout:
+        if sample_group.shape ==0: continue
         first_in_group = sample_group[0]
         if expr_validity_array[first_in_group]:
             layout_exp = expr_list[first_in_group]
-            ith_answer_variable = input_answers_variable[sample_group]
+            ith_answer = input_answers[sample_group]
+
+            ith_answer_variable = Variable(torch.LongTensor(ith_answer))
             ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
+
+
             textAttention = myAttentions[sample_group, :]
-            ith_images_variable = input_images_variable[sample_group,:]
+
+            ith_image = input_images[sample_group,:,:,:]
+            ith_images_variable = Variable(torch.FloatTensor(ith_image))
+            ith_images_variable = ith_images_variable.cuda() if use_cuda else ith_images_variable
+
+            ##image[batch_size, H_feat, W_feat, D_feat] ==> [batch_size, D_feat, W_feat, H_feat] for conv2d
+            ith_images_variable = ith_images_variable.permute(0, 3, 1, 2)
+
+            ith_images_variable = ith_images_variable.contiguous()
+
             myAnswers = myModuleNet(input_image_variable=ith_images_variable,
                                     input_text_attention_variable=textAttention,
                                     target_answer_variable=ith_answer_variable,
                                     expr_list=layout_exp)
             answer_loss += criterion_answer(myAnswers, ith_answer_variable)
 
-            current_answer = torch.topk(myLayouts, 1)[1].cpu().data.numpy()[:, :, 0]
-            n_correct_layout += np.sum(np.all(current_answer == input_answers[sample_group], axis=0))
+            current_answer = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:,0]
+
+            n_correct_answer += np.sum(np.all(current_answer == input_answers[sample_group], axis=0))
 
 
 
@@ -207,8 +222,8 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     if (i_iter + 1) % log_interval == 0 :
         print("iter:", i_iter,
               " cur_layout_accuracy:%.3f"% current_layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
-              " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy,
-              " layout_loss:%.3f"% layout_loss.cpu().data.numpy()[0], "answer_loss: %.3f"% answer_loss.cpu().data.numpy()[0])
+              " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy)
+              #" layout_loss:%.3f"% layout_loss.cpu().data.numpy()[0], "answer_loss: %.3f"% answer_loss.cpu().data.numpy()[0])
         sys.stdout.flush()
 
     # Save snapshot

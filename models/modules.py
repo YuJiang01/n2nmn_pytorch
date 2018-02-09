@@ -75,7 +75,7 @@ class FindSamePropertyModule(nn.Module):
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[2:4]
-        att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
+        att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1).view(-1, 1, H*W)
         image_reshape = input_image_feat.view(-1,self.image_dim,H * W)
         att_feat_1 = torch.sum(att_softmax_1 * image_reshape, dim=2)    #[N, image_dim]
         att_feat_1_mapped = self.att_fc_1(att_feat_1).view(-1, self.map_dim,1,1)       #[N, map_dim,1,1]
@@ -239,8 +239,8 @@ class SamePropertyModule(nn.Module):
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
         H, W = input_image_attention1.shape[2:4]
-        att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1)
-        att_softmax_2 = F.softmax(input_image_attention2.view(-1, H * W), dim=1)
+        att_softmax_1 = F.softmax(input_image_attention1.view(-1, H * W),dim=1).view(-1, 1, H*W)
+        att_softmax_2 = F.softmax(input_image_attention2.view(-1, H * W), dim=1).view(-1, 1, H*W)
         image_reshape = input_image_feat.view(-1,self.image_dim,H * W)
         att_feat_1 = torch.sum(att_softmax_1 * image_reshape, dim=2)    #[N, image_dim]
         att_feat_2 = torch.sum(att_softmax_2 * image_reshape, dim=2)
