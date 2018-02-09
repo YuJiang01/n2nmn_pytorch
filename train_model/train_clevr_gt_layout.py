@@ -230,9 +230,9 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     # Save snapshot
     if  (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
-        layout_snapshot_file = os.path.join(snapshot_dir, " seq2seq_%08d" % (i_iter + 1))
+        layout_snapshot_file = os.path.join(snapshot_dir, "seq2seq_%08d" % (i_iter + 1))
         torch.save(mySeq2seq, layout_snapshot_file)
-        module_snapshot_file = os.path.join(snapshot_dir, " module_%08d" % (i_iter + 1))
+        module_snapshot_file = os.path.join(snapshot_dir, "module_%08d" % (i_iter + 1))
         torch.save(myModuleNet, module_snapshot_file)
         print('snapshot saved to ' + layout_snapshot_file + "and " +module_snapshot_file)
 
