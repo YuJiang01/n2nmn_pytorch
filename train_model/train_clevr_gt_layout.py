@@ -52,7 +52,7 @@ myEncoder = EncoderRNN(num_vocab_txt, hidden_size, num_layers)
 myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn, 0.1, num_layers)
 
 criterion = nn.NLLLoss()
-criterion_answer = nn.CrossEntropyLoss()
+criterion_answer = nn.CrossEntropyLoss(size_average = False)
 
 if use_cuda:
     myEncoder = myEncoder.cuda()
@@ -67,7 +67,7 @@ myModuleNet = module_net(image_height= H_feat, image_width = W_feat, in_image_di
 
 myModuleNet = myModuleNet.cuda() if use_cuda else myModuleNet
 
-answerOptimizer = optim.Adam(myModuleNet.parameters())
+answerOptimizer = optim.Adam(myModuleNet.parameters(),weight_decay=weight_decay)
 
 
 avg_accuracy = 0
@@ -101,7 +101,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     target_variable = Variable(torch.LongTensor(input_layouts))
     target_variable = target_variable.cuda() if use_cuda else target_variable
 
-    myOptimizer = optim.Adam(mySeq2seq.parameters())
+    myOptimizer = optim.Adam(mySeq2seq.parameters(),weight_decay=weight_decay)
     myOptimizer.zero_grad()
 
     myLayouts, myAttentions = mySeq2seq(input_variable, input_text_seq_lens, target_variable)
@@ -139,7 +139,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     sample_groups_by_layout = unique_columns(predicted_layouts)
 
     for sample_group in sample_groups_by_layout:
-        if sample_group.shape ==0: continue
+        if sample_group.shape == 0: continue
 
         answerOptimizer.zero_grad()
         first_in_group = sample_group[0]
@@ -173,36 +173,6 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
             n_correct_answer += np.sum(current_answer == input_answers[sample_group])
 
 
-
-    ## for the first step, train sample one by one
-    '''for i_sample in range(n_sample):
-
-        ##skip the case when expr is not validity
-        if expr_validity_array[i_sample]:
-            answerOptimizer.zero_grad()
-            #print("iter:", i_iter, " isample:" ,i_sample)
-            ith_answer_variable = input_answers_variable[i_sample]
-            ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
-            text_index = Variable(torch.LongTensor([i_sample]))
-            text_index = text_index.cuda() if use_cuda else text_index
-            textAttention = torch.index_select(myAttentions, dim=0,index=text_index)
-            layout_exp = expr_list[i_sample]
-
-            image_index = Variable(torch.LongTensor([i_sample]))
-            image_index = image_index.cuda() if use_cuda else image_index
-            ith_images_variable = torch.index_select(input_images_variable, dim=0,index=image_index)
-            #.view(1,D_feat,H_feat,W_feat)
-            myAnswers = myModuleNet(input_image_variable = ith_images_variable,
-                                    input_text_attention_variable =textAttention,
-                                    target_answer_variable = ith_answer_variable,
-                                    expr_list=layout_exp,expr_validity=expr_validity_array[i_sample])
-
-            answer_loss += criterion_answer(myAnswers,ith_answer_variable)
-            current_answer = torch.topk(myAnswers, 1)[1].cpu().data.numpy()
-            if current_answer[0, 0] == input_answers[i_sample]:
-                n_correct_answer += 1
-            #answer_loss.backward(retain_graph=True)
-            #answerOptimizer.step()'''
 
     total_loss = layout_loss+ answer_loss
     total_loss.backward()
