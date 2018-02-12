@@ -16,9 +16,9 @@ snapshot_name = args.snapshot_name
 tst_image_set = args.test_split
 
 
-layout_accuracy, layout_correct_total, num_questions_total = run_eval(exp_name,snapshot_name,tst_image_set,print_log=True)
+layout_accuracy, layout_correct_total, num_questions_total,answer_accuracy = run_eval(exp_name,snapshot_name,tst_image_set,print_log=True)
 
 
 print('On split: %s' % tst_image_set)
-print('\t layout accuracy = %f (%d / %d)' %
-      (layout_accuracy, layout_correct_total, num_questions_total))
+print('\t layout accuracy = %f (%d / %d) answer_accuracy= %f' %
+      (layout_accuracy, layout_correct_total, num_questions_total,answer_accuracy))
