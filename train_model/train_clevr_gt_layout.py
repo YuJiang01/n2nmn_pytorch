@@ -67,7 +67,7 @@ myModuleNet = module_net(image_height= H_feat, image_width = W_feat, in_image_di
 
 myModuleNet = myModuleNet.cuda() if use_cuda else myModuleNet
 
-answerOptimizer = optim.Adam(myModuleNet.parameters(),weight_decay=weight_decay)
+answerOptimizer = optim.Adam(myModuleNet.parameters(),weight_decay=0)
 
 
 avg_accuracy = 0
@@ -101,7 +101,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     target_variable = Variable(torch.LongTensor(input_layouts))
     target_variable = target_variable.cuda() if use_cuda else target_variable
 
-    myOptimizer = optim.Adam(mySeq2seq.parameters(),weight_decay=weight_decay)
+    myOptimizer = optim.Adam(mySeq2seq.parameters(),weight_decay=0)
     myOptimizer.zero_grad()
 
     myLayouts, myAttentions = mySeq2seq(input_variable, input_text_seq_lens, target_variable)
