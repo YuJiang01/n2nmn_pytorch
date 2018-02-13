@@ -48,8 +48,8 @@ num_vocab_txt = data_reader_trn.batch_loader.vocab_dict.num_vocab
 num_vocab_nmn = len(assembler.module_names)
 num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 
-myEncoder = EncoderRNN(num_vocab_txt, hidden_size, num_layers)
-myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn, 0.1, num_layers)
+myEncoder = EncoderRNN(num_vocab_txt, hidden_size, embed_dim_txt, num_layers)
+myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn,embed_dim_nmn, 0.1, num_layers)
 
 criterion = nn.NLLLoss()
 criterion_answer = nn.CrossEntropyLoss(size_average = False)
@@ -121,16 +121,6 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     ## get the layout information
     expr_list, expr_validity_array = assembler.assemble(predicted_layouts)
-
-    #input_answers_variable = Variable(torch.LongTensor(input_answers))
-    #input_answers_variable = input_answers_variable.cuda() if use_cuda else input_answers_variable
-
-    #input_images_variable = Variable(torch.FloatTensor(input_images))
-    #input_images_variable = input_images_variable.cuda() if use_cuda else input_images_variable
-
-    ##image[batch_size, H_feat, W_feat, D_feat] ==> [batch_size, D_feat, W_feat, H_feat] for conv2d
-    #input_images_variable = input_images_variable.permute(0,3,1,2)
-
 
 
     answer_loss = 0

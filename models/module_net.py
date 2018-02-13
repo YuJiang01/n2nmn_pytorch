@@ -12,7 +12,7 @@ use_cuda = torch.cuda.is_available()
 class module_net(nn.Module):
 
     ##initiate all small modules which will be used here
-    def __init__(self,image_height, image_width, in_image_dim,in_text_dim, out_num_choices,map_dim):
+    def __init__(self, image_height, image_width, in_image_dim, in_text_dim, out_num_choices, map_dim):
         super(module_net,self).__init__()
         self.image_height = image_height
         self.image_width = image_width
@@ -21,8 +21,8 @@ class module_net(nn.Module):
         self.out_num_choices = out_num_choices
         self.map_dim = map_dim
         self.SceneModule = SceneModule()
-        self.FindModule = FindModule(image_dim=in_image_dim,text_dim=in_text_dim,map_dim= map_dim)
-        self.TransformModule = TransformModule(image_dim=in_image_dim, text_dim=in_text_dim,map_dim = map_dim)
+        self.FindModule = FindModule(image_dim=in_image_dim, text_dim=in_text_dim, map_dim= map_dim)
+        self.TransformModule = TransformModule(image_dim=in_image_dim, text_dim=in_text_dim, map_dim = map_dim)
         self.AndModule = AndModule()
         self.OrModule = OrModule()
         self.FilterModule = FilterModule(findModule=self.FindModule, andModule=self.AndModule)
@@ -75,7 +75,7 @@ class module_net(nn.Module):
         text_index = Variable(torch.LongTensor([time_idx]))
         text_index = text_index.cuda() if use_cuda else text_index
         text_at_time = torch.index_select(input_text_attention_variable, dim=1,
-                                          index=text_index).view(-1,self.in_text_dim)
+                                          index=text_index).view(-1, self.in_text_dim)
 
         input_0 = None
         input_1 = None
