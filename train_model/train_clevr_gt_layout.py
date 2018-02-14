@@ -186,6 +186,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% current_layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
               " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy,
+              " decay_answer_accuracy:%.4f" % avg_accuracy,
               " layout_loss:%.3f"% layout_loss.cpu().data.numpy()[0], "answer_loss: %.3f"% answer_loss.cpu().data.numpy()[0])
         sys.stdout.flush()
 
