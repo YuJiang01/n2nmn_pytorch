@@ -43,13 +43,12 @@ myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_
 
 
 
-myOptimizer = optim.Adam(myModel.parameters(), weight_decay=0)
+myOptimizer = optim.Adam(myModel.parameters(), weight_decay=weight_decay)
 
 
 avg_accuracy = 0
 accuracy_decay = 0.99
 avg_layout_accuracy = 0
-
 
 for i_iter, batch in enumerate(data_reader_trn.batches()):
     if i_iter >= max_iter:
@@ -74,7 +73,6 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     myOptimizer.zero_grad()
 
-
     total_loss, myAnswer, predicted_layouts, expr_validity_array = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                                     input_layout_variable=input_layout_variable,
                                     input_answers=input_answers, input_images=input_images)
@@ -92,7 +90,8 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     if (i_iter + 1) % log_interval == 0 :
         print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
-              " cur_ans_accuracy:%.4f"% accuracy, " avg_answer_accuracy:%.4f"% avg_accuracy)
+              " cur_ans_accuracy:%.4f"% accuracy, " avg_answer_accuracy:%.4f"% avg_accuracy,
+              " validity:%.4f"%validity, " loss:%.4f"%total_loss.data.cpu().numpy()[0])
         sys.stdout.flush()
 
     # Save snapshot
