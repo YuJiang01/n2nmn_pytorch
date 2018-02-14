@@ -73,9 +73,11 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     myOptimizer.zero_grad()
 
-    total_loss, myAnswer, predicted_layouts, expr_validity_array = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
+    layout_loss,answer_loss, myAnswer, predicted_layouts, expr_validity_array = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                                     input_layout_variable=input_layout_variable,
                                     input_answers=input_answers, input_images=input_images)
+
+    total_loss = layout_loss + answer_loss
 
     total_loss.backward()
     myOptimizer.step()
@@ -91,7 +93,9 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
               " cur_ans_accuracy:%.4f"% accuracy, " avg_answer_accuracy:%.4f"% avg_accuracy,
-              " validity:%.4f"%validity, " loss:%.4f"%total_loss.data.cpu().numpy()[0])
+              " validity:%.4f"%validity, "total loss:%.4f"%total_loss.data.cpu().numpy()[0]
+              , "layout loss:%.4f" % layout_loss.data.cpu().numpy()[0]
+              , "answer loss:%.4f" % answer_loss.data.cpu().numpy()[0])
         sys.stdout.flush()
 
     # Save snapshot
@@ -99,6 +103,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         model_snapshot_file = os.path.join(snapshot_dir, "model_%08d" % (i_iter + 1))
         torch.save(myModel, model_snapshot_file)
         print('snapshot saved to ' + model_snapshot_file )
+        sys.stdout.flush()
 
 
 

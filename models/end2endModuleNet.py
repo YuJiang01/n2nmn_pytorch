@@ -92,9 +92,10 @@ class end2endModuleNet(nn.Module):
 
                 current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
 
-        total_loss = layout_loss + answer_loss
+        #total_loss = layout_loss + answer_loss
 
-        return total_loss, current_answer, predicted_layouts, expr_validity_array
+
+        return layout_loss, answer_loss, current_answer, predicted_layouts, expr_validity_array
 
 
 
