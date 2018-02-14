@@ -180,12 +180,13 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     current_answer_accuracy = n_correct_answer/n_sample
     n_correct_answer_total += n_correct_answer
     avg_answer_accuracy =  n_correct_answer_total/n_total
+    avg_accuracy +=(1-accuracy_decay) *(current_answer_accuracy - avg_accuracy)
 
     if (i_iter + 1) % log_interval == 0 :
         print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% current_layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
-              " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy)
-              #" layout_loss:%.3f"% layout_loss.cpu().data.numpy()[0], "answer_loss: %.3f"% answer_loss.cpu().data.numpy()[0])
+              " cur_ans_accuracy:%.4f"% current_answer_accuracy, " avg_answer_accuracy:%.4f"% avg_answer_accuracy,
+              " layout_loss:%.3f"% layout_loss.cpu().data.numpy()[0], "answer_loss: %.3f"% answer_loss.cpu().data.numpy()[0])
         sys.stdout.flush()
 
     # Save snapshot
@@ -195,6 +196,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         module_snapshot_file = os.path.join(snapshot_dir, "module_%08d" % (i_iter + 1))
         torch.save(myModuleNet, module_snapshot_file)
         print('snapshot saved to ' + layout_snapshot_file + "and " +module_snapshot_file)
+        sys.stdout.flush()
 
 
 

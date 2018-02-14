@@ -5,9 +5,12 @@ import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu_id', type=int, default=0)
+parser.add_argument('--exp_name', type=str, default="clevr_gt_layout")
+
 args = parser.parse_args()
 
 gpu_id = args.gpu_id  # set GPU id to use
+exp_name = args.exp_name
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
@@ -35,7 +38,7 @@ baseline_decay = 0.99
 max_grad_l2_norm = 10
 max_iter = 80000
 snapshot_interval = 10000
-exp_name = "clevr_gt_layout"
+
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name
 
 # Log params
