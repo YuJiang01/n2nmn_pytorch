@@ -80,6 +80,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     total_loss = layout_loss + answer_loss
 
     total_loss.backward()
+    torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
     myOptimizer.step()
 
     layout_accuracy = np.mean(np.all(predicted_layouts == input_layouts, axis=0))
@@ -89,7 +90,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     avg_accuracy += (1 - accuracy_decay) * (accuracy - avg_accuracy)
     validity = np.mean(expr_validity_array)
 
-    if (i_iter + 1) % log_interval == 0 :
+    if (i_iter + 1) % 50 == 0 :
         print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
               " cur_ans_accuracy:%.4f"% accuracy, " avg_answer_accuracy:%.4f"% avg_accuracy,
