@@ -105,7 +105,7 @@ class AttnDecoderRNN(nn.Module):
 
         ##
         output = F.softmax(self.out(output), dim=2)
-        return output, hidden, attention
+        return output, hidden, mix
 
     def initHidden(self,batch_size):
         result = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
@@ -130,11 +130,12 @@ class attention_seq2seq(nn.Module):
         decoder_results, encoder_hidden, attention = self.decoder(target_variable, encoder_hidden,encoder_outputs,input_seq_lens)
 
         ##(seq_len,batch,txt_embed_dim) ==> (batch,seq_len,txt_embed_dim)
-        txt_embeded_perm = txt_embeded.permute(1,0,2)
+        #txt_embeded_perm = txt_embeded.permute(1,0,2)
         ##(batch,out_len,seq_len) * (batch,seq_len,txt_embed_dim) --> (batch,out_len,txt_embed_dim)
-        att_weigted_text = torch.bmm(attention, txt_embeded_perm)
+        #att_weigted_text = torch.bmm(attention, txt_embeded_perm)
 
-        return decoder_results,att_weigted_text
+        #return decoder_results,att_weigted_text
+        return decoder_results, attention
 
 
 
