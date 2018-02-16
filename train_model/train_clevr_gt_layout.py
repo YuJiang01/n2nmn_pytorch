@@ -80,7 +80,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     total_loss = layout_loss + answer_loss
 
     total_loss.backward()
-    torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
+    #torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
     myOptimizer.step()
 
     layout_accuracy = np.mean(np.all(predicted_layouts == input_layouts, axis=0))
