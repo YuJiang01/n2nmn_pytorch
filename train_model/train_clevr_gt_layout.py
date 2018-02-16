@@ -43,7 +43,7 @@ myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_
 
 
 
-myOptimizer = optim.Adam(myModel.parameters(), weight_decay=weight_decay)
+myOptimizer = optim.Adam(myModel.parameters(), weight_decay=0)
 
 
 avg_accuracy = 0
