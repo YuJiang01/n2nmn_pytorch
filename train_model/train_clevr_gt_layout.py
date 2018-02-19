@@ -90,13 +90,14 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     avg_accuracy += (1 - accuracy_decay) * (accuracy - avg_accuracy)
     validity = np.mean(expr_validity_array)
 
-    if (i_iter + 1) % 50 == 0 :
+    if (i_iter + 1) % 100 == 0 :
         print("iter:", i_iter + 1,
               " cur_layout_accuracy:%.3f"% layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
               " cur_ans_accuracy:%.4f"% accuracy, " avg_answer_accuracy:%.4f"% avg_accuracy,
               " validity:%.4f"%validity, "total loss:%.4f"%total_loss.data.cpu().numpy()[0]
               , "layout loss:%.4f" % layout_loss.data.cpu().numpy()[0]
               , "answer loss:%.4f" % answer_loss.data.cpu().numpy()[0])
+
         sys.stdout.flush()
 
     # Save snapshot
