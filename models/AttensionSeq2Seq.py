@@ -94,6 +94,7 @@ class AttnDecoderRNN(nn.Module):
 
         attention = F.softmax(raw_attention, dim=2) ##(batch,out_len,seq_len)  TODO: double check which dim to do softmax
 
+
         ##c_t = \sum_{i=1}^I att_{ti}h_i t: decoder time t, and encoder time i
         ## (seq_len,batch_size,hidden_size) ==>(batch_size,seq_len,hidden_size)
         encoder_batch_first = encoder_outputs.permute(1,0,2)
@@ -109,7 +110,7 @@ class AttnDecoderRNN(nn.Module):
 
         ##(batch,out_len,hidden_size) ->(out_len,batch,hidden_size)
         #output_prob = output_prob.permute(1, 0, 2)
-        return output_prob, hidden, attention
+        return output_prob, hidden, context
 
 
 
@@ -176,12 +177,12 @@ class attention_seq2seq(nn.Module):
         decoder_results, encoder_hidden, attention = self.decoder(target_variable, encoder_hidden,encoder_outputs,input_seq_lens)
 
         ##(seq_len,batch,txt_embed_dim) ==> (batch,seq_len,txt_embed_dim)
-        txt_embeded_perm = txt_embeded.permute(1,0,2)
+        #txt_embeded_perm = txt_embeded.permute(1,0,2)
         ##(batch,out_len,seq_len) * (batch,seq_len,txt_embed_dim) --> (batch,out_len,txt_embed_dim)
-        att_weigted_text = torch.bmm(attention, txt_embeded_perm)
+        #att_weigted_text = torch.bmm(attention, txt_embeded_perm)
 
-        return decoder_results,att_weigted_text
-        #return decoder_results, attention
+        #return decoder_results,att_weigted_text
+        return decoder_results, attention
 
 
 
