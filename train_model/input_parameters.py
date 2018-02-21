@@ -34,7 +34,11 @@ N = 64
 prune_filter_module = True
 
 # Training parameters
-weight_decay = 5e-6
+#weight_decay = 5e-6
+weight_decay = 5e-5
+
+learning_rate = 0.001
+
 baseline_decay = 0.99
 max_grad_l2_norm = 10
 max_iter = 80000

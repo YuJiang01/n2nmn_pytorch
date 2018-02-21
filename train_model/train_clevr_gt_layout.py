@@ -43,7 +43,7 @@ myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_
 
 
 
-myOptimizer = optim.Adam(myModel.parameters(), weight_decay=0)
+myOptimizer = optim.Adam(myModel.parameters(), weight_decay=weight_decay, lr=learning_rate)
 
 
 avg_accuracy = 0
@@ -80,7 +80,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     total_loss = layout_loss + answer_loss
 
     total_loss.backward()
-    #torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
+    torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
     myOptimizer.step()
 
     layout_accuracy = np.mean(np.all(predicted_layouts == input_layouts, axis=0))
