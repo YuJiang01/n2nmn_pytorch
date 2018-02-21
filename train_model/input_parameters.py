@@ -5,7 +5,7 @@ import os
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu_id', type=int, default=0)
-parser.add_argument('--exp_name', type=str, default="clevr_gt_layout")
+parser.add_argument("--exp_name",type=str, default="clevr_gt_layout")
 
 args = parser.parse_args()
 
@@ -20,7 +20,8 @@ os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 H_feat = 10
 W_feat = 15
 D_feat = 512
-embed_dim_txt = 300
+#embed_dim_txt = 300
+embed_dim_txt = 512
 embed_dim_nmn = 300
 hidden_size = 512
 num_layers = 2

@@ -50,7 +50,10 @@ class AttnDecoderRNN(nn.Module):
         self.attn_combine = nn.Linear(self.hidden_size * 2, self.hidden_size)
         self.dropout = nn.Dropout(self.dropout_p)
         self.lstm = nn.LSTM(self.output_encoding_size, self.hidden_size)
-        self.out = nn.Linear(self.hidden_size, self.output_size)
+        self.out = nn.Linear(self.hidden_size * 2, self.output_size)
+        self.encoderLinear = nn.Linear(self.hidden_size,self.hidden_size)
+        self.decoderLinear = nn.Linear(self.hidden_size, self.hidden_size)
+        self.attnLinear = nn.Linear(self.hidden_size, 1)
 
 
     def forward(self, target_variable, hidden, encoder_outputs,encoder_lens = None):
@@ -66,7 +69,57 @@ class AttnDecoderRNN(nn.Module):
         output, hidden = self.lstm(embedded, hidden)
 
         ##step2: use function in Eq(2) of the paper to compute attention
-        ##(seq_len,batch,hidden_size) -->(batch,hidden_size,seq_len)
+        ##size encoder_outputs (seq_len,batch_size,hidden_size)==>(out_len,seq_len,batch_size,hidden_size)
+        encoder_outputs_expand = encoder_outputs.view(1,seq_len,batch_size,hidden_size).expand(out_len,seq_len,batch_size,hidden_size)
+        encoder_transform = self.encoderLinear(encoder_outputs_expand)
+
+        ##size output (out_len,batch_size,hidden_size)
+        output_expand =output.view(out_len,1,batch_size,hidden_size).expand(out_len,seq_len,batch_size,hidden_size)
+        output_transfrom = self.decoderLinear(output_expand)
+
+        ##raw_attention size (out_len,seq_len,batch_size,1)
+        raw_attention = self.attnLinear(F.tanh(encoder_transform + output_transfrom)).view(out_len,seq_len,batch_size)  ## Eq2
+
+        #(out_len, seq_len, batch_size)==>(batch_size,out_len,seq_len)
+        raw_attention = raw_attention.permute(2, 0, 1)
+
+        ##mask the end of the question
+        if encoder_lens is not None:
+            mask = np.ones((batch_size, out_len, seq_len))
+            for i, v in enumerate(encoder_lens):
+                mask[i, :, 0:v] = 0
+            mask_tensor = torch.ByteTensor(mask)
+            mask_tensor = mask_tensor.cuda() if use_cuda else mask_tensor
+            raw_attention.data.masked_fill_(mask_tensor, -float('inf'))
+
+        attention = F.softmax(raw_attention, dim=2) ##(batch,out_len,seq_len)  TODO: double check which dim to do softmax
+
+
+        ##c_t = \sum_{i=1}^I att_{ti}h_i t: decoder time t, and encoder time i
+        ## (seq_len,batch_size,hidden_size) ==>(batch_size,seq_len,hidden_size)
+        encoder_batch_first = encoder_outputs.permute(1,0,2)
+        context = torch.bmm(attention, encoder_batch_first)
+
+        ##(out_len,batch,hidden_size) --> (batch,out_len,hidden_size)
+        output_batch_first = output.permute(1, 0, 2)
+
+        ##(batch,out_len,hidden_size*2)
+        combined = torch.cat((context, output_batch_first), dim=2).permute(1, 0, 2) ##TODO continue here
+
+        output_prob = F.softmax(self.out(combined), dim=2)
+
+        ##(batch,out_len,hidden_size) ->(out_len,batch,hidden_size)
+        #output_prob = output_prob.permute(1, 0, 2)
+        return output_prob, hidden, context
+
+
+
+
+
+
+
+
+        '''##(seq_len,batch,hidden_size) -->(batch,hidden_size,seq_len)
         encoder_outputs = encoder_outputs.permute(1,2,0)
 
         ##(out_len,batch,hidden_size) --> (batch,out_len,hidden_size)
@@ -76,14 +129,8 @@ class AttnDecoderRNN(nn.Module):
         attention = torch.bmm(output,encoder_outputs)
 
 
-        ##mask the end of the question
-        if encoder_lens is not None:
-            mask = np.ones((batch_size,out_len,seq_len))
-            for i,v in enumerate(encoder_lens):
-                mask[i,:,0:v] = 0
-            mask_tensor = torch.ByteTensor(mask)
-            mask_tensor = mask_tensor.cuda() if use_cuda else mask_tensor
-            attention.data.masked_fill_(mask_tensor, -float('inf'))
+
+
 
         attention = F.softmax(attention.view(-1,seq_len), dim=1).view(batch_size,-1,seq_len) ##(batch,out_len,seq_len)
 
@@ -105,7 +152,7 @@ class AttnDecoderRNN(nn.Module):
 
         ##
         output = F.softmax(self.out(output), dim=2)
-        return output, hidden, attention
+        return output, hidden, mix'''
 
     def initHidden(self,batch_size):
         result = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
@@ -130,11 +177,12 @@ class attention_seq2seq(nn.Module):
         decoder_results, encoder_hidden, attention = self.decoder(target_variable, encoder_hidden,encoder_outputs,input_seq_lens)
 
         ##(seq_len,batch,txt_embed_dim) ==> (batch,seq_len,txt_embed_dim)
-        txt_embeded_perm = txt_embeded.permute(1,0,2)
+        #txt_embeded_perm = txt_embeded.permute(1,0,2)
         ##(batch,out_len,seq_len) * (batch,seq_len,txt_embed_dim) --> (batch,out_len,txt_embed_dim)
-        att_weigted_text = torch.bmm(attention, txt_embeded_perm)
+        #att_weigted_text = torch.bmm(attention, txt_embeded_perm)
 
-        return decoder_results,att_weigted_text
+        #return decoder_results,att_weigted_text
+        return decoder_results, attention
 
 
 
