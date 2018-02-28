@@ -55,8 +55,8 @@ class end2endModuleNet(nn.Module):
         myLayouts, myAttentions, neg_entropy, log_seq_prob = self.mySeq2seq(input_txt_variable, input_text_seq_lens, input_layout_variable)
 
 
-        log_seq_prob_avg = torch.mean(log_seq_prob)
-        print("log_seq_prob_avg= %f"%(log_seq_prob_avg))
+        #log_seq_prob_avg = torch.mean(log_seq_prob)
+        #print("log_seq_prob_avg= %f"%(log_seq_prob_avg))
         layout_loss = None
         if input_layout_variable is not None:
             layout_loss = torch.mean(-log_seq_prob)
