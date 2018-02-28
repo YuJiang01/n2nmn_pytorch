@@ -10,7 +10,7 @@ from Utils.utils import unique_columns
 class end2endModuleNet(nn.Module):
     def __init__(self, num_vocab_txt, num_vocab_nmn, out_num_choices,
                 embed_dim_nmn, embed_dim_txt, image_height, image_width, in_image_dim,
-                hidden_size, assembler, layout_criterion, answer_criterion, num_layers=1, decoder_dropout=0.1):
+                hidden_size, assembler, layout_criterion, answer_criterion,max_layout_len, num_layers=1, decoder_dropout=0.1):
 
         super(end2endModuleNet, self).__init__()
 
@@ -18,9 +18,11 @@ class end2endModuleNet(nn.Module):
         self.layout_criterion = layout_criterion
         self.answer_criterion = answer_criterion
 
+
         ##initiate encoder and decoder
         myEncoder = EncoderRNN(num_vocab_txt, hidden_size, embed_dim_txt, num_layers)
         myDecoder = AttnDecoderRNN(hidden_size, num_vocab_nmn, embed_dim_nmn,
+                                   max_decoder_len = max_layout_len,
                                    dropout_p=decoder_dropout, num_layers= num_layers,
                                    assembler_w=self.assembler.W, assembler_b=self.assembler.b,
                                    assembler_p=self.assembler.P, EOStoken=self.assembler.EOS_idx)
@@ -53,8 +55,12 @@ class end2endModuleNet(nn.Module):
         myLayouts, myAttentions, neg_entropy, log_seq_prob = self.mySeq2seq(input_txt_variable, input_text_seq_lens, input_layout_variable)
 
 
-        ##compute layout Loss
-        #layout_loss = self.layout_criterion(log_seq_prob=log_seq_prob,neg_entropy=neg_entropy)
+        log_seq_prob_avg = torch.mean(log_seq_prob)
+        print("log_seq_prob_avg= %f"%(log_seq_prob_avg))
+        layout_loss = None
+        if input_layout_variable is not None:
+            layout_loss = torch.mean(-log_seq_prob)
+
 
         predicted_layouts = np.asarray(myLayouts.cpu().data.numpy()) #torch.topk(myLayouts, 1)[1].cpu().data.numpy()[:, :, 0]
         expr_list, expr_validity_array = self.assembler.assemble(predicted_layouts)
@@ -99,7 +105,8 @@ class end2endModuleNet(nn.Module):
                 sample_group_tensor = torch.cuda.LongTensor(sample_group) if use_cuda else torch.LongTensor(sample_group)
                 
                 current_log_seq_prob = log_seq_prob[sample_group_tensor]
-                tmp1 = current_answer_loss.detach() - policy_gradient_baseline
+                current_answer_loss_val = Variable(current_answer_loss.data,requires_grad=False)
+                tmp1 = current_answer_loss_val - policy_gradient_baseline
                 current_policy_gradient_loss = tmp1 * current_log_seq_prob
 
                 if answer_losses is None:
@@ -111,8 +118,8 @@ class end2endModuleNet(nn.Module):
 
                 current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
 
-        total_loss = self.layout_criterion(neg_entropy=neg_entropy,
-                                           answer_loss=answer_losses, policy_gradient_losses=policy_gradient_losses)
+        total_loss = self.layout_criterion(neg_entropy=neg_entropy, answer_loss=answer_losses,
+                                           policy_gradient_losses=policy_gradient_losses,layout_loss=layout_loss)
 
         ##update layout policy baseline
         avg_sample_loss = torch.mean(answer_losses)

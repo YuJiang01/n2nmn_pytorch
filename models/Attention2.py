@@ -33,7 +33,7 @@ class EncoderRNN(nn.Module):
 
 class AttnDecoderRNN(nn.Module):
     def __init__(self, hidden_size, output_size, output_encoding_size,
-                 max_decoder_len=10, dropout_p=0.1,num_layers = 1,
+                 max_decoder_len=0, dropout_p=0.1,num_layers = 1,
                  assembler_w=None, assembler_b=None, assembler_p = None,EOStoken=-1):
         super(AttnDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
@@ -114,15 +114,18 @@ class AttnDecoderRNN(nn.Module):
                                         encoder_outputs, encoder_lens, decoding_state):
         ##step1 run LSTM to get decoder hidden state
 
-        if time ==0:
+
+
+        seq_len = encoder_outputs.size(0)
+        batch_size = encoder_outputs.size(1)
+        hidden_size = encoder_outputs.size(2)
+
+        if time == 0 and seq_len == 1:
             embedded = self.go_embeding(previous_token)
         else:
             embedded = self.embedding(previous_token)
             embedded = self.dropout(embedded)
 
-        seq_len = encoder_outputs.size(0)
-        batch_size = encoder_outputs.size(1)
-        hidden_size = encoder_outputs.size(2)
         out_len = embedded.size(0)
 
         output, hidden = self.lstm(embedded, previous_hidden_state)
@@ -171,13 +174,18 @@ class AttnDecoderRNN(nn.Module):
         ## [out_len,batch,out_size]
         output_prob = F.softmax(self.out(combined), dim=2)
 
+
+        ## here we need to compute the predicted_tokens and log(P_selected_token)
+
+
         ##get the valid token for current position based on previous token to perform a mask for next prediction
         ## token_validity [N, output_size]
         token_invalidity = self._get_valid_tokens(decoding_state=decoding_state,
                                                 assembler_W=self.assembler_w,
                                                 assembler_b=self.assembler_b)
 
-        probs = F.softmax(output_prob,dim=1).view(-1,self.output_size)
+        ## probs
+        probs = output_prob.view(-1,self.output_size)
         probs.data.masked_fill_(token_invalidity,0.0)
         probs_sum = torch.sum(probs, dim=1, keepdim=True)
         probs = probs/probs_sum

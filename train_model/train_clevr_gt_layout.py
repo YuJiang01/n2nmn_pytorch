@@ -40,6 +40,7 @@ myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_
                            embed_dim_nmn=embed_dim_nmn, embed_dim_txt=embed_dim_txt,
                            image_height=H_feat, image_width=W_feat, in_image_dim=D_feat,
                            hidden_size=hidden_size, assembler=assembler, layout_criterion=criterion_layout,
+                           max_layout_len = T_decoder,
                            answer_criterion=criterion_answer, num_layers=num_layers, decoder_dropout=0)
 
 
