@@ -2,16 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-from torch import optim
-import random
 import numpy as np
 
-
 use_cuda = torch.cuda.is_available()
-SOS_token = 1
-EOS_token = 0
 
-MAX_LENGTH = 500
 
 
 class EncoderRNN(nn.Module):
@@ -37,16 +31,10 @@ class EncoderRNN(nn.Module):
 
 
 
-
-
-
-
-
-
 class AttnDecoderRNN(nn.Module):
     def __init__(self, hidden_size, output_size, output_encoding_size,
                  max_decoder_len=10, dropout_p=0.1,num_layers = 1,
-                 assembler_w=None, assembler_b = None, assembler_p = None):
+                 assembler_w=None, assembler_b=None, assembler_p = None,EOStoken=-1):
         super(AttnDecoderRNN, self).__init__()
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -55,6 +43,7 @@ class AttnDecoderRNN(nn.Module):
         self.num_layers = num_layers
         self.max_decoder_len = max_decoder_len
 
+        self.go_embeding = nn.Embedding(1, self.output_encoding_size)
         self.embedding = nn.Embedding(self.output_size, self.output_encoding_size)
         self.dropout = nn.Dropout(self.dropout_p)
         self.lstm = nn.LSTM(self.output_encoding_size, self.hidden_size)
@@ -65,17 +54,20 @@ class AttnDecoderRNN(nn.Module):
         self.assembler_w = torch.FloatTensor(assembler_w)
         self.assembler_b = torch.FloatTensor(assembler_b)
         self.assembler_p = torch.FloatTensor(assembler_p)
+        self.batch_size = 0
+        self.EOS_token = EOStoken
 
-
-    '''decoding_state [N,3]
-    assembler_w [3,output_size, 4 ]
-    assembler_b [output_size, 4]
-    output [N, output_size]
+    '''
+        compute if a token is valid at current sequence
+        decoding_state [N,3]
+        assembler_w [3,output_size, 4 ]
+        assembler_b [output_size, 4]
+        output [N, output_size]
     '''
     def _get_valid_tokens(self,decoding_state, assembler_W, assembler_b):
 
         batch_size = decoding_state.size(0)
-        expanded_state=decoding_state.view(-1,3,1,1).expand(-1, 3, self.output_size, 4)
+        expanded_state = decoding_state.view(batch_size,3,1,1).expand(batch_size, 3, self.output_size, 4)
 
         expanded_w= assembler_W.view(1,3, self.output_size,4).expand(batch_size, 3, self.output_size, 4)
 
@@ -83,25 +75,50 @@ class AttnDecoderRNN(nn.Module):
         expanded_b = assembler_b.view(1,-1,4).expand(batch_size,-1,4)
         tmp2= tmp1 - expanded_b
         tmp3 = torch.min(tmp2,dim=2)[0]
-        token_validity = torch.gt(tmp3, 0)
+        token_invalidity = torch.lt(tmp3, 0)
 
-        return token_validity
+        return token_invalidity
 
 
-    '''decoding_state [N,3]
-    assembler_p [output_size, 3]
-    predicted_token [N,output_size]
-    output [N, output_size]
+    '''
+        update the decoding state, which is used to determine if a token is valid
+        decoding_state [N,3]
+        assembler_p [output_size, 3]
+        predicted_token [N,output_size]
+        output [N, output_size]
     '''
     def _update_decoding_state(self, decoding_state, predicted_token, assembler_P):
         decoding_state = decoding_state + torch.mm(predicted_token , assembler_P)
         return decoding_state
 
-    ## this function handle the case decode each step or a whole sequence
-    def _step_by_step_attention_decoder(self, time, previous_token, previous_hidden_state, encoder_outputs,decoding_state=None,encoder_lens = None):
+
+    '''
+        for a give state compute the lstm hidden layer, attention and predicted layers
+        can handle the situation where seq_len is 1 or >1 (i.e., s=using groudtruth layout)
+        
+        input parameters :
+            time: int, time step of decoder
+            previous_token: [decoder_len, batch], decoder_len=1 for step-by-step decoder
+            previous_hidden_state: (h_n, c_n), dimmension:both are (num_layers * num_directions, batch, hidden_size)
+            encoder_outputs : outputs from LSTM in encoder[seq_len, batch, hidden_size * num_directions]
+            encoder_lens: list of input sequence lengths
+            decoding_state: the state used to decide valid tokens
+        
+        output parameters : 
+            predicted_token: [decoder_len, batch]
+            Att_weighted_text: batch,out_len,txt_embed_dim
+            log_seq_prob: [batch]
+            neg_entropy: [batch]
+    '''
+    def _step_by_step_attention_decoder(self, time, previous_token, previous_hidden_state,
+                                        encoder_outputs, encoder_lens, decoding_state):
         ##step1 run LSTM to get decoder hidden state
-        embedded = self.embedding(previous_token)
-        embedded = self.dropout(embedded)
+
+        if time ==0:
+            embedded = self.go_embeding(previous_token)
+        else:
+            embedded = self.embedding(previous_token)
+            embedded = self.dropout(embedded)
 
         seq_len = encoder_outputs.size(0)
         batch_size = encoder_outputs.size(1)
@@ -154,19 +171,19 @@ class AttnDecoderRNN(nn.Module):
         ## [out_len,batch,out_size]
         output_prob = F.softmax(self.out(combined), dim=2)
 
-        ##get the valid token for current position based on previous token
+        ##get the valid token for current position based on previous token to perform a mask for next prediction
         ## token_validity [N, output_size]
-        token_validity = self._get_valid_tokens(decoding_state=decoding_state,
-                                              assembler_W=self.assembler_w,
-                                              assembler_b=self.assembler_b)
+        token_invalidity = self._get_valid_tokens(decoding_state=decoding_state,
+                                                assembler_W=self.assembler_w,
+                                                assembler_b=self.assembler_b)
 
-        token_validity = Variable(token_validity.type(torch.FloatTensor).view(-1,batch_size ,self.output_size)).detach()
+        probs = F.softmax(output_prob,dim=1).view(-1,self.output_size)
+        probs.data.masked_fill_(token_invalidity,0.0)
+        probs_sum = torch.sum(probs, dim=1, keepdim=True)
+        probs = probs/probs_sum
 
-        probs = F.softmax(token_validity * output_prob, dim=2).view(-1,self.output_size)
-
-        ## predict the token for current layer,
+        ## predict the token for current layer, []
         predicted_token = probs.multinomial()
-
 
         ##[batch_size, self.output_size]
         predicted_token_encoded = torch.zeros(batch_size, self.output_size).scatter_(1, predicted_token.data, 1)
@@ -175,36 +192,55 @@ class AttnDecoderRNN(nn.Module):
                                                              predicted_token=predicted_token_encoded,
                                                              assembler_P=self.assembler_p)
 
-        return predicted_token.permute(1,0), hidden, output_prob, context,updated_decoding_state
+        ## compute the negative entropy
+        token_invalidity_float = Variable(token_invalidity.type(torch.FloatTensor)).detach()
+        token_neg_entropy = torch.sum(probs * torch.log(probs + token_invalidity_float), dim=1)
+
+        ## compute log_seq_prob
+        selected_token_log_prob =torch.log(torch.sum(probs * Variable(predicted_token_encoded).detach(), dim=1))
 
 
-    def forward(self, hidden, encoder_outputs, encoder_lens, target_variable = None ):
+        return predicted_token.permute(1, 0), hidden, context, updated_decoding_state,token_neg_entropy, selected_token_log_prob
 
-        batch_size = encoder_outputs.size(1)
+
+    def forward(self, hidden, encoder_outputs, encoder_lens, target_variable=None):
+
+        self.batch_size = encoder_outputs.size(1)
+        total_neg_entropy = 0
+        total_seq_prob = 0
 
         if target_variable is None:
-            output_prob_total = []
-            context_total = []
             time = 0;
             loop_state = True
-            previous_token = Variable(torch.LongTensor(np.zeros((1,batch_size))))
+            previous_token = Variable(torch.LongTensor( np.zeros((1,self.batch_size))))
+            predicted_tokens = previous_token
             previous_hidden = hidden
-            next_decoding_state = torch.FloatTensor(batch_size, 3).zero_()
+            next_decoding_state = torch.FloatTensor([[0, 0, self.max_decoder_len]]).expand(self.batch_size, 3).contiguous()
 
             while time < self.max_decoder_len and loop_state :
-                predicted_token, previous_hidden, output_prob, context, next_decoding_state = \
+                predicted_token, previous_hidden, context, next_decoding_state, neg_entropy, log_seq_prob = \
                     self._step_by_step_attention_decoder(
                     time=time,previous_token=previous_token,
                     previous_hidden_state=previous_hidden, encoder_outputs=encoder_outputs,
                     encoder_lens=encoder_lens,decoding_state=next_decoding_state)
+
+                if time ==0:
+                    predicted_tokens = previous_token
+                    total_neg_entropy = neg_entropy
+                    total_seq_prob = log_seq_prob
+                    context_total = context
+                else:
+                    predicted_tokens = torch.cat((predicted_tokens, predicted_token))
+                    total_neg_entropy += neg_entropy
+                    total_seq_prob += log_seq_prob
+                    context_total = torch.cat((context_total,context),dim=1)
+
                 time +=1
                 previous_token = predicted_token
-                loop_state = torch.ne(predicted_token, EOS_token).any()
-                output_prob_total.append(output_prob)
-                context_total.append(context)
+                loop_state = torch.ne(predicted_token, self.EOS_token).any()
 
 
-            return output_prob_total, previous_hidden, context_total
+            return predicted_tokens, context_total, total_neg_entropy, total_seq_prob
 
 
         else:
@@ -213,77 +249,7 @@ class AttnDecoderRNN(nn.Module):
                     time=0, previous_token=target_variable,
                     previous_hidden_state=hidden, encoder_outputs=encoder_outputs,
                     encoder_lens=encoder_lens)
-            return output_prob, hidden, context
-
-
-
-
-    '''
-        def forward(self, target_variable, hidden, encoder_outputs,encoder_lens = None):
-        embedded = self.embedding(target_variable)
-        embedded = self.dropout(embedded)
-
-        seq_len = encoder_outputs.size(0)
-        batch_size = encoder_outputs.size(1)
-        hidden_size = encoder_outputs.size(2)
-        out_len = embedded.size(0)
-
-        ##step1 run LSTM to get decoder hidden state
-        output, hidden = self.lstm(embedded, hidden)
-
-        ##step2: use function in Eq(2) of the paper to compute attention
-        ##size encoder_outputs (seq_len,batch_size,hidden_size)==>(out_len,seq_len,batch_size,hidden_size)
-        encoder_outputs_expand = encoder_outputs.view(1,seq_len,batch_size,hidden_size).expand(out_len,seq_len,batch_size,hidden_size)
-        encoder_transform = self.encoderLinear(encoder_outputs_expand)
-
-        ##size output (out_len,batch_size,hidden_size)
-        output_expand =output.view(out_len,1,batch_size,hidden_size).expand(out_len,seq_len,batch_size,hidden_size)
-        output_transfrom = self.decoderLinear(output_expand)
-
-        ##raw_attention size (out_len,seq_len,batch_size,1)
-        raw_attention = self.attnLinear(F.tanh(encoder_transform + output_transfrom)).view(out_len,seq_len,batch_size)  ## Eq2
-
-        #(out_len, seq_len, batch_size)==>(batch_size,out_len,seq_len)
-        raw_attention = raw_attention.permute(2, 0, 1)
-
-        ##mask the end of the question
-        if encoder_lens is not None:
-            mask = np.ones((batch_size, out_len, seq_len))
-            for i, v in enumerate(encoder_lens):
-                mask[i, :, 0:v] = 0
-            mask_tensor = torch.ByteTensor(mask)
-            mask_tensor = mask_tensor.cuda() if use_cuda else mask_tensor
-            raw_attention.data.masked_fill_(mask_tensor, -float('inf'))
-
-        attention = F.softmax(raw_attention, dim=2) ##(batch,out_len,seq_len)  TODO: double check which dim to do softmax
-
-
-        ##c_t = \sum_{i=1}^I att_{ti}h_i t: decoder time t, and encoder time i
-        ## (seq_len,batch_size,hidden_size) ==>(batch_size,seq_len,hidden_size)
-        encoder_batch_first = encoder_outputs.permute(1,0,2)
-        context = torch.bmm(attention, encoder_batch_first)
-
-        ##(out_len,batch,hidden_size) --> (batch,out_len,hidden_size)
-        output_batch_first = output.permute(1, 0, 2)
-
-        ##(batch,out_len,hidden_size*2)
-        combined = torch.cat((context, output_batch_first), dim=2).permute(1, 0, 2) ##TODO continue here
-
-        output_prob = F.softmax(self.out(combined), dim=2)
-
-        ##(batch,out_len,hidden_size) ->(out_len,batch,hidden_size)
-        #output_prob = output_prob.permute(1, 0, 2)
-        return output_prob, hidden, context'''
-
-    def initHidden(self,batch_size):
-        result = Variable(torch.zeros(self.num_layers, batch_size, self.hidden_size))
-        if use_cuda:
-            return result.cuda()
-        else:
-            return result
-
-
-
+            return target_variable, context,total_neg_entropy,total_seq_prob
 
 
 class attention_seq2seq(nn.Module):
@@ -295,26 +261,9 @@ class attention_seq2seq(nn.Module):
     def forward(self, input_seqs,input_seq_lens,target_variable):
         encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
         encoder_outputs, encoder_hidden, txt_embeded = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
-        decoder_results, encoder_hidden, attention = self.decoder(target_variable=None,
+        decoder_results, attention, neg_entropy, log_seq_prob = self.decoder(target_variable=None,
                                                                     hidden= encoder_hidden,
                                                                     encoder_outputs= encoder_outputs,
                                                                     encoder_lens=input_seq_lens)
 
-        ##(seq_len,batch,txt_embed_dim) ==> (batch,seq_len,txt_embed_dim)
-        #txt_embeded_perm = txt_embeded.permute(1,0,2)
-        ##(batch,out_len,seq_len) * (batch,seq_len,txt_embed_dim) --> (batch,out_len,txt_embed_dim)
-        #att_weigted_text = torch.bmm(attention, txt_embeded_perm)
-
-        #return decoder_results,att_weigted_text
-        return decoder_results, attention
-
-
-
-
-
-
-
-
-
-
-
+        return decoder_results, attention, neg_entropy, log_seq_prob
