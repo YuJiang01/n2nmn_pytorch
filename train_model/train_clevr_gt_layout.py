@@ -33,7 +33,7 @@ num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 
 
 
-criterion_layout = custom_loss()
+criterion_layout = custom_loss(lambda_entropy = 0.01)
 criterion_answer = nn.CrossEntropyLoss(size_average=False,reduce=False)
 
 myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_nmn, out_num_choices=num_choices,
@@ -45,12 +45,13 @@ myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_
 
 
 
-myOptimizer = optim.Adam(myModel.parameters(), weight_decay=weight_decay, lr=learning_rate)
+myOptimizer = optim.Adam(myModel.parameters(), weight_decay=0, lr=learning_rate)
 
 
 avg_accuracy = 0
 accuracy_decay = 0.99
 avg_layout_accuracy = 0
+updated_baseline = np.log(28)
 
 for i_iter, batch in enumerate(data_reader_trn.batches()):
     if i_iter >= max_iter:
@@ -73,7 +74,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     input_layout_variable = Variable(torch.LongTensor(input_layouts))
     input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
 
-    updated_baseline = np.log(28)
+    
     myOptimizer.zero_grad()
 
     total_loss, myAnswer, predicted_layouts, expr_validity_array, updated_baseline \

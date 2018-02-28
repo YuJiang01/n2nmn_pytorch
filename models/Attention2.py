@@ -51,9 +51,9 @@ class AttnDecoderRNN(nn.Module):
         self.encoderLinear = nn.Linear(self.hidden_size, self.hidden_size)
         self.decoderLinear = nn.Linear(self.hidden_size, self.hidden_size)
         self.attnLinear = nn.Linear(self.hidden_size, 1)
-        self.assembler_w = torch.FloatTensor(assembler_w)
-        self.assembler_b = torch.FloatTensor(assembler_b)
-        self.assembler_p = torch.FloatTensor(assembler_p)
+        self.assembler_w = torch.FloatTensor(assembler_w).cuda() if use_cuda else torch.FloatTensor(assembler_w)
+        self.assembler_b = torch.FloatTensor(assembler_b).cuda() if use_cuda else torch.FloatTensor(assembler_b)
+        self.assembler_p = torch.FloatTensor(assembler_p).cuda() if use_cuda else torch.FloatTensor(assembler_p)
         self.batch_size = 0
         self.EOS_token = EOStoken
 
@@ -76,7 +76,7 @@ class AttnDecoderRNN(nn.Module):
         tmp2= tmp1 - expanded_b
         tmp3 = torch.min(tmp2,dim=2)[0]
         token_invalidity = torch.lt(tmp3, 0)
-
+        token_invalidity = token_invalidity.cuda() if use_cuda else token_invalidity
         return token_invalidity
 
 
@@ -186,7 +186,10 @@ class AttnDecoderRNN(nn.Module):
         predicted_token = probs.multinomial()
 
         ##[batch_size, self.output_size]
-        predicted_token_encoded = torch.zeros(batch_size, self.output_size).scatter_(1, predicted_token.data, 1)
+        tmp = torch.zeros(batch_size, self.output_size)
+        tmp = tmp.cuda() if use_cuda else tmp
+        predicted_token_encoded = tmp.scatter_(1, predicted_token.data, 1.0)
+        predicted_token_encoded = predicted_token_encoded.cuda() if use_cuda else predicted_token_encoded
 
         updated_decoding_state = self._update_decoding_state(decoding_state=decoding_state,
                                                              predicted_token=predicted_token_encoded,
@@ -194,10 +197,11 @@ class AttnDecoderRNN(nn.Module):
 
         ## compute the negative entropy
         token_invalidity_float = Variable(token_invalidity.type(torch.FloatTensor)).detach()
-        token_neg_entropy = torch.sum(probs * torch.log(probs + token_invalidity_float), dim=1)
+        token_invalidity_float = token_invalidity_float.cuda() if use_cuda else token_invalidity_float
+        token_neg_entropy = torch.sum(probs.detach() * torch.log(probs + token_invalidity_float), dim=1)
 
         ## compute log_seq_prob
-        selected_token_log_prob =torch.log(torch.sum(probs * Variable(predicted_token_encoded).detach(), dim=1))
+        selected_token_log_prob =torch.log(torch.sum(probs * Variable(predicted_token_encoded), dim=1))
 
 
         return predicted_token.permute(1, 0), hidden, context, updated_decoding_state,token_neg_entropy, selected_token_log_prob
@@ -213,9 +217,11 @@ class AttnDecoderRNN(nn.Module):
             time = 0;
             loop_state = True
             previous_token = Variable(torch.LongTensor( np.zeros((1,self.batch_size))))
+            previous_token = previous_token.cuda() if use_cuda else previous_token
             predicted_tokens = previous_token
             previous_hidden = hidden
             next_decoding_state = torch.FloatTensor([[0, 0, self.max_decoder_len]]).expand(self.batch_size, 3).contiguous()
+            next_decoding_state = next_decoding_state.cuda() if use_cuda else next_decoding_state
 
             while time < self.max_decoder_len and loop_state :
                 predicted_token, previous_hidden, context, next_decoding_state, neg_entropy, log_seq_prob = \

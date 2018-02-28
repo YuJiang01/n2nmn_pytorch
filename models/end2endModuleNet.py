@@ -96,7 +96,9 @@ class end2endModuleNet(nn.Module):
                                         expr_list=layout_exp)
 
                 current_answer_loss = self.answer_criterion(myAnswers, ith_answer_variable)
-                current_log_seq_prob = log_seq_prob[torch.LongTensor(sample_group)]
+                sample_group_tensor = torch.cuda.LongTensor(sample_group) if use_cuda else torch.LongTensor(sample_group)
+                
+                current_log_seq_prob = log_seq_prob[sample_group_tensor]
                 tmp1 = current_answer_loss.detach() - policy_gradient_baseline
                 current_policy_gradient_loss = tmp1 * current_log_seq_prob
 
@@ -114,8 +116,9 @@ class end2endModuleNet(nn.Module):
 
         ##update layout policy baseline
         avg_sample_loss = torch.mean(answer_losses)
-        updated_baseline = policy_gradient_baseline + (1-baseline_decay) * (avg_sample_loss - policy_gradient_baseline)
-
+        avg_sample_loss_value = avg_sample_loss.cpu().data.numpy()[0]
+        updated_baseline = policy_gradient_baseline + (1-baseline_decay) * (avg_sample_loss_value - policy_gradient_baseline)
+        
         return total_loss, current_answer, predicted_layouts, expr_validity_array, updated_baseline
 
 
