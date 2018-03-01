@@ -107,7 +107,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         sys.stdout.flush()
 
     # Save snapshot
-    if  (i_iter + 1) % 50 == 0 or (i_iter + 1) == max_iter:
+    if  (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
         model_snapshot_file = os.path.join(snapshot_dir, "model_%08d" % (i_iter + 1))
         torch.save(myModel, model_snapshot_file)
         print('snapshot saved to ' + model_snapshot_file )

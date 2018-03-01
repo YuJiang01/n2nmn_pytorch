@@ -104,6 +104,7 @@ class end2endModuleNet(nn.Module):
                                         input_text_attention_variable=textAttention,
                                         target_answer_variable=ith_answer_variable,
                                         expr_list=layout_exp)
+                current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
 
 
                 ##compute loss function only when answer is provided
@@ -143,7 +144,7 @@ class end2endModuleNet(nn.Module):
                     updated_baseline = policy_gradient_baseline + (1 - baseline_decay) * (
                                 avg_sample_loss_value - policy_gradient_baseline)
 
-        current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
+            
 
         return total_loss, avg_answer_loss, current_answer, predicted_layouts, expr_validity_array, updated_baseline
 

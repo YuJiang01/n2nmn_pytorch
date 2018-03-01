@@ -200,7 +200,8 @@ class AttnDecoderRNN(nn.Module):
         probs = probs/probs_sum
 
         ## predict the token for current layer, []
-        predicted_token = probs.multinomial()
+        #predicted_token = probs.multinomial()
+        predicted_token = torch.max(probs, dim=1)[1].view(-1, 1)
 
         ##[batch_size, self.output_size]
         tmp = torch.zeros(batch_size, self.output_size)
