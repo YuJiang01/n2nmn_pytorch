@@ -120,7 +120,7 @@ class end2endModuleNet(nn.Module):
                 current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
 
         try:
-            total_loss = self.layout_criterion(neg_entropy=neg_entropy, answer_loss=answer_losses,
+            total_loss, avg_answer_loss = self.layout_criterion(neg_entropy=neg_entropy, answer_loss=answer_losses,
                                            policy_gradient_losses=policy_gradient_losses,layout_loss=layout_loss)
         except:
             print("sample_group = ",sample_group)
@@ -128,6 +128,7 @@ class end2endModuleNet(nn.Module):
             print("answer_losses=",answer_losses)
             print("policy_gradient_losses=",policy_gradient_losses)
             print("layout_loss=",layout_loss)
+            sys.stdout.flush()
             sys.exit("Exception Occur")
 
 
@@ -136,7 +137,7 @@ class end2endModuleNet(nn.Module):
         avg_sample_loss_value = avg_sample_loss.cpu().data.numpy()[0]
         updated_baseline = policy_gradient_baseline + (1-baseline_decay) * (avg_sample_loss_value - policy_gradient_baseline)
         
-        return total_loss, current_answer, predicted_layouts, expr_validity_array, updated_baseline
+        return total_loss, avg_answer_loss, current_answer, predicted_layouts, expr_validity_array, updated_baseline
 
 
 

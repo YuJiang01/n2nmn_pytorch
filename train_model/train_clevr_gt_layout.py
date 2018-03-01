@@ -78,11 +78,11 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     
     myOptimizer.zero_grad()
 
-    total_loss, myAnswer, predicted_layouts, expr_validity_array, updated_baseline \
+    total_loss,avg_answer_loss ,myAnswer, predicted_layouts, expr_validity_array, updated_baseline \
         = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                   input_answers=input_answers, input_images=input_images,policy_gradient_baseline =updated_baseline,
                   baseline_decay = baseline_decay
-                ,input_layout_variable=input_layout_variable,
+                #,input_layout_variable=input_layout_variable,
                   )
 
 
@@ -99,9 +99,10 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     if (i_iter + 1) % 20 == 0 :
         print("iter:", i_iter + 1,
-              " cur_layout_accuracy:%.3f"% layout_accuracy, " avg_layout_accuracy:%.3f"% avg_layout_accuracy,
-              " cur_ans_accuracy:%.4f"% accuracy, " avg_answer_accuracy:%.4f"% avg_accuracy,
-              " validity:%.4f"%validity, "total loss:%.4f"%total_loss.data.cpu().numpy()[0])
+              " cur_layout_acc:%.3f"% layout_accuracy, " avg_layout_acc:%.3f"% avg_layout_accuracy,
+              " cur_ans_acc:%.4f"% accuracy, " avg_answer_acc:%.4f"% avg_accuracy,
+              "total loss:%.4f"%total_loss.data.cpu().numpy()[0],
+              "avg_answer_loss:%.4f"% avg_answer_loss.data.cpu().numpy()[0])
 
         sys.stdout.flush()
 
