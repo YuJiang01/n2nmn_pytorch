@@ -44,26 +44,23 @@ class end2endModuleNet(nn.Module):
 
         self.myModuleNet = myModuleNet.cuda() if use_cuda else myModuleNet
 
-
     def forward(self, input_txt_variable, input_text_seq_lens,
-                input_answers, input_images,
-                input_layout_variable=None,policy_gradient_baseline=None
-                ,baseline_decay=0):
+                input_images, input_answers=None,
+                input_layout_variable=None, policy_gradient_baseline=None,
+                baseline_decay=0):
 
         batch_size = len(input_text_seq_lens)
 
         ##run attentionSeq2Seq
-        myLayouts, myAttentions, neg_entropy, log_seq_prob = self.mySeq2seq(input_txt_variable, input_text_seq_lens, input_layout_variable)
+        myLayouts, myAttentions, neg_entropy, log_seq_prob = \
+            self.mySeq2seq(input_txt_variable, input_text_seq_lens, input_layout_variable)
 
 
-        #log_seq_prob_avg = torch.mean(log_seq_prob)
-        #print("log_seq_prob_avg= %f"%(log_seq_prob_avg))
         layout_loss = None
         if input_layout_variable is not None:
             layout_loss = torch.mean(-log_seq_prob)
 
-
-        predicted_layouts = np.asarray(myLayouts.cpu().data.numpy()) #torch.topk(myLayouts, 1)[1].cpu().data.numpy()[:, :, 0]
+        predicted_layouts = np.asarray(myLayouts.cpu().data.numpy())
         expr_list, expr_validity_array = self.assembler.assemble(predicted_layouts)
 
         ## group samples based on layout
@@ -72,6 +69,9 @@ class end2endModuleNet(nn.Module):
         ##run moduleNet
         answer_losses = None
         policy_gradient_losses = None
+        avg_answer_loss =None
+        total_loss = None
+        updated_baseline = policy_gradient_baseline
         current_answer = np.zeros(batch_size)
 
         for sample_group in sample_groups_by_layout:
@@ -81,10 +81,13 @@ class end2endModuleNet(nn.Module):
             first_in_group = sample_group[0]
             if expr_validity_array[first_in_group]:
                 layout_exp = expr_list[first_in_group]
-                ith_answer = input_answers[sample_group]
 
-                ith_answer_variable = Variable(torch.LongTensor(ith_answer))
-                ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
+                if input_answers is None:
+                    ith_answer_variable = None
+                else:
+                    ith_answer = input_answers[sample_group]
+                    ith_answer_variable = Variable(torch.LongTensor(ith_answer))
+                    ith_answer_variable = ith_answer_variable.cuda() if use_cuda else ith_answer_variable
 
                 textAttention = myAttentions[sample_group, :]
 
@@ -102,41 +105,46 @@ class end2endModuleNet(nn.Module):
                                         target_answer_variable=ith_answer_variable,
                                         expr_list=layout_exp)
 
-                current_answer_loss = self.answer_criterion(myAnswers, ith_answer_variable)
-                sample_group_tensor = torch.cuda.LongTensor(sample_group) if use_cuda else torch.LongTensor(sample_group)
+
+                ##compute loss function only when answer is provided
+                if ith_answer_variable is not None:
+                    current_answer_loss = self.answer_criterion(myAnswers, ith_answer_variable)
+                    sample_group_tensor = torch.cuda.LongTensor(sample_group) if use_cuda else torch.LongTensor(sample_group)
                 
-                current_log_seq_prob = log_seq_prob[sample_group_tensor]
-                current_answer_loss_val = Variable(current_answer_loss.data,requires_grad=False)
-                tmp1 = current_answer_loss_val - policy_gradient_baseline
-                current_policy_gradient_loss = tmp1 * current_log_seq_prob
+                    current_log_seq_prob = log_seq_prob[sample_group_tensor]
+                    current_answer_loss_val = Variable(current_answer_loss.data,requires_grad=False)
+                    tmp1 = current_answer_loss_val - policy_gradient_baseline
+                    current_policy_gradient_loss = tmp1 * current_log_seq_prob
 
-                if answer_losses is None:
-                    answer_losses = current_answer_loss
-                    policy_gradient_losses = current_policy_gradient_loss
-                else:
-                    answer_losses = torch.cat((answer_losses,current_answer_loss))
-                    policy_gradient_losses = torch.cat((policy_gradient_losses,current_policy_gradient_loss))
+                    if answer_losses is None:
+                        answer_losses = current_answer_loss
+                        policy_gradient_losses = current_policy_gradient_loss
+                    else:
+                        answer_losses = torch.cat((answer_losses, current_answer_loss))
+                        policy_gradient_losses = torch.cat((policy_gradient_losses, current_policy_gradient_loss))
 
-                current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
+                    try:
+                        total_loss, avg_answer_loss = self.layout_criterion(neg_entropy=neg_entropy,
+                                                                            answer_loss=answer_losses,
+                                                                            policy_gradient_losses=policy_gradient_losses,
+                                                                            layout_loss=layout_loss)
+                    except:
+                        print("sample_group = ", sample_group)
+                        print("neg_entropy=", neg_entropy)
+                        print("answer_losses=", answer_losses)
+                        print("policy_gradient_losses=", policy_gradient_losses)
+                        print("layout_loss=", layout_loss)
+                        sys.stdout.flush()
+                        sys.exit("Exception Occur")
 
-        try:
-            total_loss, avg_answer_loss = self.layout_criterion(neg_entropy=neg_entropy, answer_loss=answer_losses,
-                                           policy_gradient_losses=policy_gradient_losses,layout_loss=layout_loss)
-        except:
-            print("sample_group = ",sample_group)
-            print("neg_entropy=",neg_entropy)
-            print("answer_losses=",answer_losses)
-            print("policy_gradient_losses=",policy_gradient_losses)
-            print("layout_loss=",layout_loss)
-            sys.stdout.flush()
-            sys.exit("Exception Occur")
+                    ##update layout policy baseline
+                    avg_sample_loss = torch.mean(answer_losses)
+                    avg_sample_loss_value = avg_sample_loss.cpu().data.numpy()[0]
+                    updated_baseline = policy_gradient_baseline + (1 - baseline_decay) * (
+                                avg_sample_loss_value - policy_gradient_baseline)
 
+        current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
 
-        ##update layout policy baseline
-        avg_sample_loss = torch.mean(answer_losses)
-        avg_sample_loss_value = avg_sample_loss.cpu().data.numpy()[0]
-        updated_baseline = policy_gradient_baseline + (1-baseline_decay) * (avg_sample_loss_value - policy_gradient_baseline)
-        
         return total_loss, avg_answer_loss, current_answer, predicted_layouts, expr_validity_array, updated_baseline
 
 

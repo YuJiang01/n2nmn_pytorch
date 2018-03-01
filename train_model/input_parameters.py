@@ -34,8 +34,8 @@ N = 64
 prune_filter_module = True
 
 # Training parameters
-#weight_decay = 5e-6
-weight_decay = 5e-5
+weight_decay = 5e-6
+lambda_entropy = 0.01
 
 learning_rate = 0.001
 

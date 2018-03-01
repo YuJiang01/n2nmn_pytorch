@@ -33,7 +33,7 @@ num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 
 
 
-criterion_layout = custom_loss(lambda_entropy = 0.01)
+criterion_layout = custom_loss(lambda_entropy = lambda_entropy)
 criterion_answer = nn.CrossEntropyLoss(size_average=False,reduce=False)
 
 myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_nmn, out_num_choices=num_choices,
@@ -46,7 +46,7 @@ myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_
 
 
 
-myOptimizer = optim.Adam(myModel.parameters(), weight_decay=0, lr=learning_rate)
+myOptimizer = optim.Adam(myModel.parameters(), weight_decay=weight_decay, lr=learning_rate)
 
 
 avg_accuracy = 0
@@ -82,7 +82,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                   input_answers=input_answers, input_images=input_images,policy_gradient_baseline =updated_baseline,
                   baseline_decay = baseline_decay
-                #,input_layout_variable=input_layout_variable,
+                ,input_layout_variable=input_layout_variable,
                   )
 
 
@@ -107,7 +107,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         sys.stdout.flush()
 
     # Save snapshot
-    if  (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
+    if  (i_iter + 1) % 50 == 0 or (i_iter + 1) == max_iter:
         model_snapshot_file = os.path.join(snapshot_dir, "model_%08d" % (i_iter + 1))
         torch.save(myModel, model_snapshot_file)
         print('snapshot saved to ' + model_snapshot_file )

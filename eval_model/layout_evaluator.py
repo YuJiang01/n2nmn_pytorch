@@ -80,13 +80,13 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
             input_txt_variable = Variable(torch.LongTensor(input_text_seqs))
             input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
 
-            input_layout_variable = Variable(torch.LongTensor(input_layouts))
-            input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
+            #input_layout_variable = Variable(torch.LongTensor(input_layouts))
+            #input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
 
-            layout_loss, answer_loss, myAnswer, predicted_layouts, expr_validity_array = myModel(
+            _, _, myAnswer, predicted_layouts, expr_validity_array,_ = myModel(
                 input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
-                input_layout_variable=input_layout_variable,
-                input_answers=input_answers, input_images=input_images)
+                input_layout_variable=None,
+                input_answers=None, input_images=input_images)
 
 
             layout_correct_total += np.sum(np.all(predicted_layouts == input_layouts, axis=0))
