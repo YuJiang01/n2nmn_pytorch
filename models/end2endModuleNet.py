@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import sys
 from models.Attention2 import *
 from models.module_net import *
 from Utils.utils import unique_columns
@@ -118,8 +119,17 @@ class end2endModuleNet(nn.Module):
 
                 current_answer[sample_group] = torch.topk(myAnswers, 1)[1].cpu().data.numpy()[:, 0]
 
-        total_loss = self.layout_criterion(neg_entropy=neg_entropy, answer_loss=answer_losses,
+        try:
+            total_loss = self.layout_criterion(neg_entropy=neg_entropy, answer_loss=answer_losses,
                                            policy_gradient_losses=policy_gradient_losses,layout_loss=layout_loss)
+        except:
+            print("sample_group = ",sample_group)
+            print("neg_entropy=",neg_entropy)
+            print("answer_losses=",answer_losses)
+            print("policy_gradient_losses=",policy_gradient_losses)
+            print("layout_loss=",layout_loss)
+            sys.exit("Exception Occur")
+
 
         ##update layout policy baseline
         avg_sample_loss = torch.mean(answer_losses)

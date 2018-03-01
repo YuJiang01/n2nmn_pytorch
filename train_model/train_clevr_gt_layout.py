@@ -82,7 +82,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
         = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                   input_answers=input_answers, input_images=input_images,policy_gradient_baseline =updated_baseline,
                   baseline_decay = baseline_decay
-                  # input_layout_variable=input_layout_variable,
+                ,input_layout_variable=input_layout_variable,
                   )
 
 

@@ -111,7 +111,7 @@ class AttnDecoderRNN(nn.Module):
             neg_entropy: [batch]
     '''
     def _step_by_step_attention_decoder(self, time, previous_token, previous_hidden_state,
-                                        encoder_outputs, encoder_lens, decoding_state):
+                                        encoder_outputs, encoder_lens, decoding_state=None):
         ##step1 run LSTM to get decoder hidden state
 
 
@@ -175,7 +175,16 @@ class AttnDecoderRNN(nn.Module):
         output_prob = F.softmax(self.out(combined), dim=2)
 
 
-        ## here we need to compute the predicted_tokens and log(P_selected_token)
+        ## here we need to compute the predicted_tokens and log(P_selected_token) for ground truth layout
+        if out_len > 1:
+            predicted_token_expand = previous_token.view(out_len,batch_size,1).expand((out_len,batch_size, self.output_size))
+            mask = torch.arange(self.output_size).type(torch.LongTensor).view(1,1,self.output_size).expand((out_len,batch_size, self.output_size))
+            mask = Variable(mask,requires_grad=False)
+            mask = mask.cuda() if use_cuda else mask
+            token_encoded = torch.eq(predicted_token_expand,mask)
+            token_encoded =token_encoded.type(torch.cuda.FloatTensor) if use_cuda else token_encoded.type(torch.FloatTensor)
+            selected_token_log_prob =torch.sum(torch.sum(torch.log(output_prob + 0.000001) * token_encoded,dim=2),dim=0)
+            return previous_token, hidden, context, None,None, selected_token_log_prob
 
 
         ##get the valid token for current position based on previous token to perform a mask for next prediction
@@ -258,7 +267,7 @@ class AttnDecoderRNN(nn.Module):
 
 
         else:
-            predicted_token, hidden, output_prob, context,_ = \
+            predicted_token, hidden,  context,_ ,total_neg_entropy,total_seq_prob = \
                 self._step_by_step_attention_decoder(
                     time=0, previous_token=target_variable,
                     previous_hidden_state=hidden, encoder_outputs=encoder_outputs,
@@ -275,7 +284,7 @@ class attention_seq2seq(nn.Module):
     def forward(self, input_seqs,input_seq_lens,target_variable):
         encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
         encoder_outputs, encoder_hidden, txt_embeded = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
-        decoder_results, attention, neg_entropy, log_seq_prob = self.decoder(target_variable=None,
+        decoder_results, attention, neg_entropy, log_seq_prob = self.decoder(target_variable=target_variable,
                                                                     hidden= encoder_hidden,
                                                                     encoder_outputs= encoder_outputs,
                                                                     encoder_lens=input_seq_lens)
