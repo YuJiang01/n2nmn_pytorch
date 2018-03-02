@@ -6,6 +6,7 @@ import os
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu_id', type=int, default=0)
 parser.add_argument("--exp_name",type=str, default="clevr_gt_layout")
+parser.add_argument("--model",type=str,)
 
 args = parser.parse_args()
 
@@ -34,14 +35,15 @@ N = 64
 prune_filter_module = True
 
 # Training parameters
-weight_decay = 5e-6
+#weight_decay = 5e-6
+weight_decay = 0
 lambda_entropy = 0.01
 
 learning_rate = 0.001
 
 baseline_decay = 0.99
 max_grad_l2_norm = 10
-max_iter = 80000
+max_iter = 150000
 snapshot_interval = 10000
 
 snapshot_dir = './exp_clevr/tfmodel/%s/' % exp_name

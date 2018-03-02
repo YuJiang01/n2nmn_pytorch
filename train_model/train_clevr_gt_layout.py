@@ -72,9 +72,10 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     input_txt_variable = Variable(torch.LongTensor(input_text_seqs))
     input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
 
-    input_layout_variable = Variable(torch.LongTensor(input_layouts))
-    input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
+    #input_layout_variable = Variable(torch.LongTensor(input_layouts))
+    #input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
 
+    input_layout_variable = None
     
     myOptimizer.zero_grad()
 
@@ -85,10 +86,10 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
                 ,input_layout_variable=input_layout_variable,
                   )
 
-
-    total_loss.backward()
-    torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
-    myOptimizer.step()
+    if total_loss is not None:
+        total_loss.backward()
+        torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
+        myOptimizer.step()
 
     layout_accuracy = np.mean(np.all(predicted_layouts == input_layouts, axis=0))
     avg_layout_accuracy += (1 - accuracy_decay) * (layout_accuracy - avg_layout_accuracy)
