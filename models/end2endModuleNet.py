@@ -45,15 +45,15 @@ class end2endModuleNet(nn.Module):
         self.myModuleNet = myModuleNet.cuda() if use_cuda else myModuleNet
 
     def forward(self, input_txt_variable, input_text_seq_lens,
-                input_images, input_answers=None,
-                input_layout_variable=None, policy_gradient_baseline=None,
-                baseline_decay=0):
+                input_images, input_answers,
+                input_layout_variable,sample_token, policy_gradient_baseline=None,
+                baseline_decay=None):
 
         batch_size = len(input_text_seq_lens)
 
         ##run attentionSeq2Seq
         myLayouts, myAttentions, neg_entropy, log_seq_prob = \
-            self.mySeq2seq(input_txt_variable, input_text_seq_lens, input_layout_variable)
+            self.mySeq2seq(input_txt_variable, input_text_seq_lens, input_layout_variable,sample_token)
 
 
         layout_loss = None

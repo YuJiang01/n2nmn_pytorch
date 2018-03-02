@@ -1,20 +1,32 @@
 from __future__ import absolute_import, division, print_function
 import argparse
 import os
-
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu_id', type=int, default=0)
 parser.add_argument("--exp_name",type=str, default="clevr_gt_layout")
-parser.add_argument("--model",type=str,)
+#parser.add_argument("--model_type",type=str,choices=["scratch", "gt_layout", "gt+rl"])
 
 args = parser.parse_args()
 
 gpu_id = args.gpu_id  # set GPU id to use
 exp_name = args.exp_name
+#model_type = args.model
 
 
 os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
+
+
+'''if model_type == "scratch":
+    from train_model.from_scratch_hyperparameters import *
+elif model_type == "gt_layout":
+    from train_model.gt_hyperparameters import *
+elif model_type == "gt+rl":
+    from train_model.gt_rl_hyperparameters import *
+else:
+    sys.exit("unknown model type", model_type)'''
+
 
 
 # Module parameters

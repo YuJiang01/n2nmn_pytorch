@@ -81,9 +81,9 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
 
     total_loss,avg_answer_loss ,myAnswer, predicted_layouts, expr_validity_array, updated_baseline \
         = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
-                  input_answers=input_answers, input_images=input_images,policy_gradient_baseline =updated_baseline,
-                  baseline_decay = baseline_decay
-                ,input_layout_variable=input_layout_variable,
+                  input_answers=input_answers, input_images=input_images,policy_gradient_baseline=updated_baseline,
+                  baseline_decay=baseline_decay, input_layout_variable=input_layout_variable,
+                  sample_token=decoder_sampling
                   )
 
     if total_loss is not None:

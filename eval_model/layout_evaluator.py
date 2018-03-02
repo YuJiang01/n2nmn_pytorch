@@ -86,7 +86,7 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
             _, _, myAnswer, predicted_layouts, expr_validity_array,_ = myModel(
                 input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                 input_layout_variable=input_layout_variable,
-                input_answers=None, input_images=input_images)
+                input_answers=None, input_images=input_images,sample_token=False)
 
 
             layout_correct_total += np.sum(predicted_layouts == input_layouts, axis=0)

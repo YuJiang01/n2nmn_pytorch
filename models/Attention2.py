@@ -211,7 +211,7 @@ class AttnDecoderRNN(nn.Module):
 
 
 
-    def forward(self,encoder_hidden,encoder_outputs,encoder_lens,target_variable=None,sample_token=False):
+    def forward(self,encoder_hidden,encoder_outputs,encoder_lens,target_variable,sample_token):
         self.batch_size = encoder_outputs.size(1)
         total_neg_entropy = 0
         total_seq_prob = 0
@@ -259,13 +259,13 @@ class attention_seq2seq(nn.Module):
         self.encoder = encoder
         self.decoder = decoder
 
-    def forward(self, input_seqs,input_seq_lens,target_variable):
+    def forward(self, input_seqs,input_seq_lens,target_variable,sample_token):
         encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
         encoder_outputs, encoder_hidden, txt_embeded = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
         decoder_results, attention, neg_entropy, log_seq_prob = self.decoder(target_variable=target_variable,
                                                                     encoder_hidden= encoder_hidden,
                                                                     encoder_outputs= encoder_outputs,
-                                                                    encoder_lens=input_seq_lens, sample_token=True
+                                                                    encoder_lens=input_seq_lens, sample_token=sample_token
                                                                              )
 
         return decoder_results, attention, neg_entropy, log_seq_prob
