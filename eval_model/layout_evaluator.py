@@ -12,7 +12,7 @@ use_cuda = torch.cuda.is_available()
 
 
 T_encoder = 45
-T_decoder = 20
+T_decoder = 10
 N = 64
 prune_filter_module = True
 
@@ -82,7 +82,7 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
 
             input_layout_variable = Variable(torch.LongTensor(input_layouts))
             input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
-            #input_layout_variable = None
+            input_layout_variable = None
             _, _, myAnswer, predicted_layouts, expr_validity_array,_ = myModel(
                 input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                 input_layout_variable=input_layout_variable,

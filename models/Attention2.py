@@ -3,9 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-
-use_cuda = torch.cuda.is_available()
-
+from train_model.global_variables import use_cuda
 
 
 class EncoderRNN(nn.Module):
@@ -110,21 +108,13 @@ class AttnDecoderRNN(nn.Module):
             log_seq_prob: [batch]
             neg_entropy: [batch]
     '''
-    def _step_by_step_attention_decoder(self, time, previous_token, previous_hidden_state,
-                                        encoder_outputs, encoder_lens, decoding_state=None):
+    def _step_by_step_attention_decoder(self, time, embedded, previous_hidden_state,
+                                        encoder_outputs, encoder_lens, decoding_state,target_variable,sample_token):
+
         ##step1 run LSTM to get decoder hidden state
-
-
-
         seq_len = encoder_outputs.size(0)
         batch_size = encoder_outputs.size(1)
         hidden_size = encoder_outputs.size(2)
-
-        if time == 0 and seq_len == 1:
-            embedded = self.go_embeding(previous_token)
-        else:
-            embedded = self.embedding(previous_token)
-            embedded = self.dropout(embedded)
 
         out_len = embedded.size(0)
 
@@ -157,8 +147,7 @@ class AttnDecoderRNN(nn.Module):
             mask_tensor = mask_tensor.cuda() if use_cuda else mask_tensor
             raw_attention.data.masked_fill_(mask_tensor, -float('inf'))
 
-        attention = F.softmax(raw_attention,
-                              dim=2)  ##(batch,out_len,seq_len)  TODO: double check which dim to do softmax
+        attention = F.softmax(raw_attention, dim=2)  ##(batch,out_len,seq_len)
 
         ##c_t = \sum_{i=1}^I att_{ti}h_i t: decoder time t, and encoder time i
         ## (seq_len,batch_size,hidden_size) ==>(batch_size,seq_len,hidden_size)
@@ -175,17 +164,6 @@ class AttnDecoderRNN(nn.Module):
         output_prob = F.softmax(self.out(combined), dim=2)
 
 
-        ## here we need to compute the predicted_tokens and log(P_selected_token) for ground truth layout
-        if out_len > 1:
-            predicted_token_expand = previous_token.view(out_len,batch_size,1).expand((out_len,batch_size, self.output_size))
-            mask = torch.arange(self.output_size).type(torch.LongTensor).view(1,1,self.output_size).expand((out_len,batch_size, self.output_size))
-            mask = Variable(mask,requires_grad=False)
-            mask = mask.cuda() if use_cuda else mask
-            token_encoded = torch.eq(predicted_token_expand,mask)
-            token_encoded =token_encoded.type(torch.cuda.FloatTensor) if use_cuda else token_encoded.type(torch.FloatTensor)
-            selected_token_log_prob =torch.sum(torch.sum(torch.log(output_prob + 0.000001) * token_encoded,dim=2),dim=0)
-            return previous_token, hidden, context, None,None, selected_token_log_prob
-
 
         ##get the valid token for current position based on previous token to perform a mask for next prediction
         ## token_validity [N, output_size]
@@ -199,9 +177,14 @@ class AttnDecoderRNN(nn.Module):
         probs_sum = torch.sum(probs, dim=1, keepdim=True)
         probs = probs/probs_sum
 
-        ## predict the token for current layer, []
-        #predicted_token = probs.multinomial()
-        predicted_token = torch.max(probs, dim=1)[1].view(-1, 1)
+
+        if target_variable is not None:
+            predicted_token = target_variable[time, :].view(-1,1)
+        elif sample_token:
+            predicted_token = probs.multinomial()
+        else:
+            predicted_token = torch.max(probs, dim=1)[1].view(-1, 1)
+
 
         ##[batch_size, self.output_size]
         tmp = torch.zeros(batch_size, self.output_size)
@@ -225,55 +208,49 @@ class AttnDecoderRNN(nn.Module):
         return predicted_token.permute(1, 0), hidden, context, updated_decoding_state,token_neg_entropy, selected_token_log_prob
 
 
-    def forward(self, hidden, encoder_outputs, encoder_lens, target_variable=None):
 
+
+
+    def forward(self,encoder_hidden,encoder_outputs,encoder_lens,target_variable=None,sample_token=False):
         self.batch_size = encoder_outputs.size(1)
         total_neg_entropy = 0
         total_seq_prob = 0
 
-        if target_variable is None:
-            time = 0;
-            loop_state = True
-            previous_token = Variable(torch.LongTensor( np.zeros((1,self.batch_size))))
-            previous_token = previous_token.cuda() if use_cuda else previous_token
-            predicted_tokens = previous_token
-            previous_hidden = hidden
-            next_decoding_state = torch.FloatTensor([[0, 0, self.max_decoder_len]]).expand(self.batch_size, 3).contiguous()
-            next_decoding_state = next_decoding_state.cuda() if use_cuda else next_decoding_state
+        ## set initiate step:
+        time = 0
+        start_token = Variable(torch.LongTensor(np.zeros((1, self.batch_size))), requires_grad=False)
+        start_token = start_token.cuda() if use_cuda else start_token
+        next_input = self.go_embeding(start_token)
+        next_decoding_state = torch.FloatTensor([[0, 0, self.max_decoder_len]]).expand(self.batch_size, 3).contiguous()
+        next_decoding_state = next_decoding_state.cuda() if use_cuda else next_decoding_state
+        loop_state = True
+        previous_hidden = encoder_hidden
 
-            while time < self.max_decoder_len and loop_state :
-                predicted_token, previous_hidden, context, next_decoding_state, neg_entropy, log_seq_prob = \
-                    self._step_by_step_attention_decoder(
-                    time=time,previous_token=previous_token,
+        while time < self.max_decoder_len :
+            predicted_token, previous_hidden, context, next_decoding_state, neg_entropy, log_seq_prob = \
+                self._step_by_step_attention_decoder(time=time,
+                    embedded= next_input,
                     previous_hidden_state=previous_hidden, encoder_outputs=encoder_outputs,
-                    encoder_lens=encoder_lens,decoding_state=next_decoding_state)
+                    encoder_lens=encoder_lens, decoding_state=next_decoding_state,target_variable= target_variable,sample_token=sample_token)
 
-                if time ==0:
-                    predicted_tokens = previous_token
-                    total_neg_entropy = neg_entropy
-                    total_seq_prob = log_seq_prob
-                    context_total = context
-                else:
-                    predicted_tokens = torch.cat((predicted_tokens, predicted_token))
-                    total_neg_entropy += neg_entropy
-                    total_seq_prob += log_seq_prob
-                    context_total = torch.cat((context_total,context),dim=1)
+            if time == 0:
+                predicted_tokens = predicted_token
+                total_neg_entropy = neg_entropy
+                total_seq_prob = log_seq_prob
+                context_total = context
+            else:
+                predicted_tokens = torch.cat((predicted_tokens, predicted_token))
+                total_neg_entropy += neg_entropy
+                total_seq_prob += log_seq_prob
+                context_total = torch.cat((context_total, context), dim=1)
 
-                time +=1
-                previous_token = predicted_token
-                loop_state = torch.ne(predicted_token, self.EOS_token).any()
+            time +=1
+            next_input =self.embedding(predicted_token)
+            loop_state = torch.ne(predicted_token, self.EOS_token).any()
+
+        return predicted_tokens, context_total, total_neg_entropy, total_seq_prob
 
 
-            return predicted_tokens, context_total, total_neg_entropy, total_seq_prob
-
-
-        else:
-            predicted_token, hidden,  context,_ ,total_neg_entropy,total_seq_prob = \
-                self._step_by_step_attention_decoder(
-                    time=0, previous_token=target_variable,
-                    previous_hidden_state=hidden, encoder_outputs=encoder_outputs,
-                    encoder_lens=encoder_lens)
-            return target_variable, context,total_neg_entropy,total_seq_prob
 
 
 class attention_seq2seq(nn.Module):
@@ -286,8 +263,9 @@ class attention_seq2seq(nn.Module):
         encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
         encoder_outputs, encoder_hidden, txt_embeded = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
         decoder_results, attention, neg_entropy, log_seq_prob = self.decoder(target_variable=target_variable,
-                                                                    hidden= encoder_hidden,
+                                                                    encoder_hidden= encoder_hidden,
                                                                     encoder_outputs= encoder_outputs,
-                                                                    encoder_lens=input_seq_lens)
+                                                                    encoder_lens=input_seq_lens, sample_token=True
+                                                                             )
 
         return decoder_results, attention, neg_entropy, log_seq_prob
