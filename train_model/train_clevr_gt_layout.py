@@ -5,8 +5,7 @@ from models.layout_assembler import Assembler
 from train_model.input_parameters import *
 from models.end2endModuleNet import *
 from models.custom_loss import custom_loss
-
-use_cuda = torch.cuda.is_available()
+from global_variables.global_variables import use_cuda
 
 from models.AttensionSeq2Seq import *
 
@@ -36,15 +35,16 @@ num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
 criterion_layout = custom_loss(lambda_entropy = lambda_entropy)
 criterion_answer = nn.CrossEntropyLoss(size_average=False,reduce=False)
 
-myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_nmn, out_num_choices=num_choices,
-                           embed_dim_nmn=embed_dim_nmn, embed_dim_txt=embed_dim_txt,
-                           image_height=H_feat, image_width=W_feat, in_image_dim=D_feat,
-                           hidden_size=hidden_size, assembler=assembler, layout_criterion=criterion_layout,
-                           max_layout_len = T_decoder,
-                           answer_criterion=criterion_answer, num_layers=num_layers, decoder_dropout=0)
 
-
-
+if model_type == model_type_gt_rl:
+    myModel = torch.load(model_path)
+else:
+    myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_nmn, out_num_choices=num_choices,
+                               embed_dim_nmn=embed_dim_nmn, embed_dim_txt=embed_dim_txt,
+                               image_height=H_feat, image_width=W_feat, in_image_dim=D_feat,
+                               hidden_size=hidden_size, assembler=assembler, layout_criterion=criterion_layout,
+                               max_layout_len=T_decoder,
+                               answer_criterion=criterion_answer, num_layers=num_layers, decoder_dropout=0)
 
 myOptimizer = optim.Adam(myModel.parameters(), weight_decay=weight_decay, lr=learning_rate)
 
@@ -72,10 +72,15 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     input_txt_variable = Variable(torch.LongTensor(input_text_seqs))
     input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
 
-    #input_layout_variable = Variable(torch.LongTensor(input_layouts))
-    #input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
-
     input_layout_variable = None
+
+    if model_type == model_type_gt:
+        input_layout_variable = Variable(torch.LongTensor(input_layouts))
+        input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
+
+
+
+
     
     myOptimizer.zero_grad()
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 import numpy as np
-from train_model.global_variables import use_cuda
+from global_variables.global_variables import use_cuda
 
 
 class EncoderRNN(nn.Module):

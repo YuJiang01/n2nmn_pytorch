@@ -1,8 +1,5 @@
-import numpy as np
-import torch
-import sys
 from train_model.input_parameters import *
-from train_model.global_variables import *
+from global_variables.global_variables import *
 from torch.autograd import Variable
 
 def run_model(data_reader_trn, myModel, isTraining, myOptimizer=None,
