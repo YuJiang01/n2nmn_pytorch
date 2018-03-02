@@ -7,8 +7,7 @@ import os
 import torch
 import numpy as np
 
-
-use_cuda = torch.cuda.is_available()
+from global_variables.global_variables import use_cuda
 
 
 T_encoder = 45
@@ -81,6 +80,7 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
             input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
 
             input_layout_variable = None
+
             _, _, myAnswer, predicted_layouts, expr_validity_array,_ = myModel(
                 input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                 input_layout_variable=input_layout_variable,

@@ -7,7 +7,8 @@ from global_variables.global_variables import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--gpu_id', type=int, default=0)
 parser.add_argument("--exp_name",type=str, default="clevr_gt_layout")
-parser.add_argument("--model_type",type=str, choices=[model_type_scratch, model_type_gt, model_type_gt_rl])
+parser.add_argument("--model_type",type=str, choices=[model_type_scratch, model_type_gt, model_type_gt_rl],
+                    required=True, help='models:'+ model_type_scratch + ',' +model_type_gt+', '+model_type_gt_rl)
 parser.add_argument("--model_path",type=str, required=False)
 args = parser.parse_args()
 

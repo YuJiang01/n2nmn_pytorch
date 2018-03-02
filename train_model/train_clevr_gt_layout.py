@@ -1,13 +1,14 @@
 from __future__ import absolute_import, division, print_function
 from Utils.data_reader import DataReader
 import sys
+from torch import optim
+
 from models.layout_assembler import Assembler
 from train_model.input_parameters import *
 from models.end2endModuleNet import *
 from models.custom_loss import custom_loss
 from global_variables.global_variables import use_cuda
 
-from models.AttensionSeq2Seq import *
 
 
 
