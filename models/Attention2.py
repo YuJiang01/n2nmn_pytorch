@@ -199,10 +199,10 @@ class AttnDecoderRNN(nn.Module):
         ## compute the negative entropy
         token_invalidity_float = Variable(token_invalidity.type(torch.FloatTensor)).detach()
         token_invalidity_float = token_invalidity_float.cuda() if use_cuda else token_invalidity_float
-        token_neg_entropy = torch.sum(probs.detach() * torch.log(probs + token_invalidity_float), dim=1)
+        token_neg_entropy = torch.sum(probs.detach() * torch.log(probs + 0.000001), dim=1)
 
         ## compute log_seq_prob
-        selected_token_log_prob =torch.log(torch.sum(probs * Variable(predicted_token_encoded), dim=1))
+        selected_token_log_prob =torch.log(torch.sum(probs * Variable(predicted_token_encoded), dim=1)+ 0.000001)
 
 
         return predicted_token.permute(1, 0), hidden, context, updated_decoding_state,token_neg_entropy, selected_token_log_prob
