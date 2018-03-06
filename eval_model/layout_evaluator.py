@@ -11,7 +11,7 @@ from global_variables.global_variables import use_cuda
 
 
 T_encoder = 45
-T_decoder = 20
+T_decoder = 10
 N = 64
 prune_filter_module = True
 
@@ -87,7 +87,7 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
                 input_answers=None, input_images=input_images,sample_token=False)
 
 
-            layout_correct_total += np.sum(predicted_layouts == input_layouts, axis=0)
+            layout_correct_total += np.sum(np.all(predicted_layouts == input_layouts, axis=0))
 
 
             answer_correct_total += np.sum(np.logical_and(expr_validity_array, myAnswer == input_answers))
@@ -103,12 +103,6 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
                 print("iter:", i + 1, " layout_accuracy=%.4f"% layout_accuracy,
                       " answer_accuracy=%.4f"% answer_accuracy,
                       " layout_validity=%.4f"% layout_validity,)
-
-
-
-
-
-
 
 
 
