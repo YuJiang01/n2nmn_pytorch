@@ -54,7 +54,13 @@ class AttnDecoderRNN(nn.Module):
         self.assembler_p = torch.FloatTensor(assembler_p).cuda() if use_cuda else torch.FloatTensor(assembler_p)
         self.batch_size = 0
         self.EOS_token = EOStoken
-
+        self._init_par()
+    
+    def _init_par(self):
+        torch.nn.init.xavier_uniform(self.decoderLinear.weight)
+        torch.nn.init.xavier_uniform(self.attnLinear.weight)
+        torch.nn.init.constant(self.decoderLinear.bias,0)
+        torch.nn.init.constant(self.attnLinear.bias,0)
     '''
         compute if a token is valid at current sequence
         decoding_state [N,3]
@@ -148,6 +154,7 @@ class AttnDecoderRNN(nn.Module):
             raw_attention.data.masked_fill_(mask_tensor, -float('inf'))
 
         attention = F.softmax(raw_attention, dim=2)  ##(batch,out_len,seq_len)
+        
 
         ##c_t = \sum_{i=1}^I att_{ti}h_i t: decoder time t, and encoder time i
         ## (seq_len,batch_size,hidden_size) ==>(batch_size,seq_len,hidden_size)
@@ -205,7 +212,7 @@ class AttnDecoderRNN(nn.Module):
         selected_token_log_prob =torch.log(torch.sum(probs * Variable(predicted_token_encoded), dim=1)+ 0.000001)
 
 
-        return predicted_token.permute(1, 0), hidden, context, updated_decoding_state,token_neg_entropy, selected_token_log_prob
+        return predicted_token.permute(1, 0), hidden, attention, updated_decoding_state,token_neg_entropy, selected_token_log_prob
 
 
 
@@ -261,11 +268,18 @@ class attention_seq2seq(nn.Module):
 
     def forward(self, input_seqs,input_seq_lens,target_variable,sample_token):
         encoder_hidden = self.encoder.initHidden(len(input_seq_lens))
-        encoder_outputs, encoder_hidden, txt_embeded = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
+        encoder_outputs, encoder_hidden, txt_embedded = self.encoder(input_seqs,input_seq_lens, encoder_hidden)
         decoder_results, attention, neg_entropy, log_seq_prob = self.decoder(target_variable=target_variable,
                                                                     encoder_hidden= encoder_hidden,
                                                                     encoder_outputs= encoder_outputs,
                                                                     encoder_lens=input_seq_lens, sample_token=sample_token
                                                                              )
-
-        return decoder_results, attention, neg_entropy, log_seq_prob
+        ##using attention from decoder and txt_embedded from the encoder to get the attention weighted text
+        ## txt_embedded [seq_len,batch,input_encoding_size]
+        ## attention [batch, out_len,seq_len]
+        txt_embedded_perm = txt_embedded.permute(1,0,2)
+        att_weighted_text = torch.bmm(attention, txt_embedded_perm)
+        
+        
+        return decoder_results, att_weighted_text, neg_entropy, log_seq_prob
+        #return decoder_results, attention, neg_entropy, log_seq_prob

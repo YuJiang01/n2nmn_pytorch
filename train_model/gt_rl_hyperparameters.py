@@ -2,8 +2,8 @@
 H_feat = 10
 W_feat = 15
 D_feat = 512
-#embed_dim_txt = 300
-embed_dim_txt = 512
+embed_dim_txt = 300
+#embed_dim_txt = 512
 embed_dim_nmn = 300
 lstm_dim = 512
 num_layers = 2
