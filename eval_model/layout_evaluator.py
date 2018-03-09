@@ -7,12 +7,11 @@ import os
 import torch
 import numpy as np
 
-
-use_cuda = torch.cuda.is_available()
+from global_variables.global_variables import use_cuda
 
 
 T_encoder = 45
-T_decoder = 20
+T_decoder = 10
 N = 64
 prune_filter_module = True
 
@@ -80,13 +79,12 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
             input_txt_variable = Variable(torch.LongTensor(input_text_seqs))
             input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
 
-            input_layout_variable = Variable(torch.LongTensor(input_layouts))
-            input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
+            input_layout_variable = None
 
-            layout_loss, answer_loss, myAnswer, predicted_layouts, expr_validity_array = myModel(
+            _, _, myAnswer, predicted_layouts, expr_validity_array,_ = myModel(
                 input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
                 input_layout_variable=input_layout_variable,
-                input_answers=input_answers, input_images=input_images)
+                input_answers=None, input_images=input_images,sample_token=False)
 
 
             layout_correct_total += np.sum(np.all(predicted_layouts == input_layouts, axis=0))
@@ -105,12 +103,6 @@ def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
                 print("iter:", i + 1, " layout_accuracy=%.4f"% layout_accuracy,
                       " answer_accuracy=%.4f"% answer_accuracy,
                       " layout_validity=%.4f"% layout_validity,)
-
-
-
-
-
-
 
 
 
