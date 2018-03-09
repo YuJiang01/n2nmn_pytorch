@@ -29,9 +29,8 @@ After preprocess the data,
 ### Training
 
 Example:
-'''
+```
 python train_model/train_clevr_gt_layout.py --exp_name gt_test --model_type gt_layout  --data_dir /private/home/tinayujiang/n2nmn/exp_clevr/data --image_feat_dir /private/home/tinayujiang/n2nmn/exp_clevr/data/vgg_pool5/train --out_dir /private/home/tinayujiang/temp_out
-'''
-
+```
 
 
