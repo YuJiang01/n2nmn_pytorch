@@ -18,28 +18,22 @@ prune_filter_module = True
 
 
 
-# Data files
-vocab_question_file = './exp_clevr/data/vocabulary_clevr.txt'
-vocab_layout_file = './exp_clevr/data/vocabulary_layout.txt'
-vocab_answer_file = './exp_clevr/data/answers_clevr.txt'
+def run_eval(exp_name, snapshot_name, tst_image_set, data_dir, image_feat_dir, tf_model_dir,print_log = False):
+    vocab_question_file = os.path.join(data_dir,"vocabulary_clevr.txt")
+    vocab_layout_file = os.path.join(data_dir,"vocabulary_layout.txt")
+    vocab_answer_file = os.path.join(data_dir,"answers_clevr.txt")
 
+    imdb_file_tst_base_name = 'imdb_%s.npy' % tst_image_set
+    imdb_file_tst = os.path.join(data_dir,"imdb",imdb_file_tst_base_name)
 
-def run_eval(exp_name, snapshot_name, tst_image_set, print_log = False):
+    image_feat_dir_tst = os.path.join(image_feat_dir,tst_image_set)
 
-    imdb_file_tst = './exp_clevr/data/imdb/imdb_%s.npy' % tst_image_set
+    #module_snapshot_file = './exp_clevr/tfmodel/%s/%s' % (exp_name, "model_"+snapshot_name)
 
-    module_snapshot_file = './exp_clevr/tfmodel/%s/%s' % (exp_name, "model_"+snapshot_name)
-
-
-    save_file = './exp_clevr/results/%s/%s.%s.txt' % (exp_name, snapshot_name, tst_image_set)
-    os.makedirs(os.path.dirname(save_file), exist_ok=True)
-
-    eval_output_file = './exp_clevr/eval_outputs/%s/%s.%s.txt' % (exp_name, snapshot_name, tst_image_set)
-    os.makedirs(os.path.dirname(eval_output_file), exist_ok=True)
-
+    module_snapshot_file = os.path.join(tf_model_dir, exp_name, "model_"+snapshot_name)
     assembler = Assembler(vocab_layout_file)
 
-    data_reader_tst = DataReader(imdb_file_tst, shuffle=False, one_pass=True,
+    data_reader_tst = DataReader(imdb_file_tst,image_feat_dir_tst, shuffle=False, one_pass=True,
                                  batch_size=N,
                                  T_encoder=T_encoder,
                                  T_decoder=T_decoder,
