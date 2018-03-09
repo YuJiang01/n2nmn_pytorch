@@ -10,8 +10,9 @@ from Utils import text_processing
 from test_helper.replace_path import replace_to_my_mac
 
 class BatchLoaderClevr:
-    def __init__(self, imdb, data_params):
+    def __init__(self, imdb,image_feat_dir, data_params):
         self.imdb = imdb
+        self.image_feat_dir = image_feat_dir
         self.data_params = data_params
 
         self.vocab_dict = text_processing.VocabDict(data_params['vocab_question_file'])
@@ -36,7 +37,9 @@ class BatchLoaderClevr:
             print('imdb does not contain ground-truth layout')
 
         # load one feature map to peek its size
-        feats = np.load(replace_to_my_mac(self.imdb[0]['feature_path']))
+        image_feat_basename = os.path.basename(self.imdb[0]['feature_path'])
+        image_feat_name = os.path.join(self.image_feat_dir, image_feat_basename)
+        feats = np.load(image_feat_name)
         self.feat_H, self.feat_W, self.feat_D = feats.shape[1:]
 
     def load_one_batch(self, sample_ids):
@@ -56,7 +59,9 @@ class BatchLoaderClevr:
             seq_length = len(question_inds)
             input_seq_batch[:seq_length, n] = question_inds
             seq_length_batch[n] = seq_length
-            image_feat_batch[n:n+1] = np.load(replace_to_my_mac(iminfo['feature_path']))
+            image_feat_basename = os.path.basename(iminfo['feature_path'])
+            image_feat_name = os.path.join(self.image_feat_dir, image_feat_basename)
+            image_feat_batch[n:n+1] = np.load(image_feat_name)
             image_path_list[n] = replace_to_my_mac(iminfo['image_path'])
             if self.load_answer:
                 answer_idx = self.answer_dict.word2idx(iminfo['answer'])
@@ -83,7 +88,7 @@ class BatchLoaderClevr:
         return batch
 
 class DataReader:
-    def __init__(self, imdb_file, shuffle=True, one_pass=False, prefetch_num=8, **kwargs):
+    def __init__(self, imdb_file, image_feat_dir, shuffle=True, one_pass=False, prefetch_num=8, **kwargs):
         print('Loading imdb from file...', end=''); sys.stdout.flush()
         if imdb_file.endswith('.npy'):
             imdb = np.load(imdb_file)
@@ -91,13 +96,14 @@ class DataReader:
             raise TypeError('unknown imdb format.')
         print('Done')
         self.imdb = imdb
+        self.image_feat_dir = image_feat_dir
         self.shuffle = shuffle
         self.one_pass = one_pass
         self.prefetch_num = prefetch_num
         self.data_params = kwargs
 
         # Clevr data loader
-        self.batch_loader = BatchLoaderClevr(self.imdb, self.data_params)
+        self.batch_loader = BatchLoaderClevr(self.imdb,self.image_feat_dir, self.data_params)
 
         # Start prefetching thread
         self.prefetch_queue = queue.Queue(maxsize=self.prefetch_num)

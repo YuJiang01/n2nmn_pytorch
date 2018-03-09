@@ -18,7 +18,7 @@ os.makedirs(snapshot_dir, exist_ok=True)
 
 assembler = Assembler(vocab_layout_file)
 
-data_reader_trn = DataReader(imdb_file_trn, shuffle=True, one_pass=False,
+data_reader_trn = DataReader(imdb_file_trn,image_feat_dir, shuffle=True, one_pass=False,
                              batch_size=N,
                              T_encoder=T_encoder,
                              T_decoder=T_decoder,
