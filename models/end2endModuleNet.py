@@ -96,7 +96,7 @@ class end2endModuleNet(nn.Module):
                 ith_images_variable = ith_images_variable.cuda() if use_cuda else ith_images_variable
 
                 ##image[batch_size, H_feat, W_feat, D_feat] ==> [batch_size, D_feat, W_feat, H_feat] for conv2d
-                ith_images_variable = ith_images_variable.permute(0, 3, 1, 2)
+                #ith_images_variable = ith_images_variable.permute(0, 3, 1, 2)
 
                 ith_images_variable = ith_images_variable.contiguous()
 

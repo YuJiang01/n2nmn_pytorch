@@ -40,13 +40,15 @@ class BatchLoaderClevr:
         image_feat_basename = os.path.basename(self.imdb[0]['feature_path'])
         image_feat_name = os.path.join(self.image_feat_dir, image_feat_basename)
         feats = np.load(image_feat_name)
-        self.feat_H, self.feat_W, self.feat_D = feats.shape[1:]
+        #self.feat_H, self.feat_W, self.feat_D = feats.shape[1:]
+        self.feat_D, self.feat_H, self.feat_W = feats.shape[1:]
 
     def load_one_batch(self, sample_ids):
         actual_batch_size = len(sample_ids)
         input_seq_batch = np.zeros((self.T_encoder, actual_batch_size), np.int32)
         seq_length_batch = np.zeros(actual_batch_size, np.int32)
-        image_feat_batch = np.zeros((actual_batch_size, self.feat_H, self.feat_W, self.feat_D), np.float32)
+        #image_feat_batch = np.zeros((actual_batch_size, self.feat_H, self.feat_W, self.feat_D), np.float32)
+        image_feat_batch = np.zeros((actual_batch_size, self.feat_D, self.feat_H, self.feat_W), np.float32)
         image_path_list = [None]*actual_batch_size
         if self.load_answer:
             answer_label_batch = np.zeros(actual_batch_size, np.int32)
@@ -62,7 +64,6 @@ class BatchLoaderClevr:
             image_feat_basename = os.path.basename(iminfo['feature_path'])
             image_feat_name = os.path.join(self.image_feat_dir, image_feat_basename)
             image_feat_batch[n:n+1] = np.load(image_feat_name)
-            image_path_list[n] = replace_to_my_mac(iminfo['image_path'])
             if self.load_answer:
                 answer_idx = self.answer_dict.word2idx(iminfo['answer'])
                 answer_label_batch[n] = answer_idx
