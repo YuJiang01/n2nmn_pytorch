@@ -11,7 +11,7 @@ from Utils.utils import unique_columns
 class end2endModuleNet(nn.Module):
     def __init__(self, num_vocab_txt, num_vocab_nmn, out_num_choices,
                 embed_dim_nmn, embed_dim_txt, image_height, image_width, in_image_dim,
-                hidden_size, assembler, layout_criterion, answer_criterion,max_layout_len, num_layers=1, decoder_dropout=0.1):
+                hidden_size, assembler, layout_criterion, answer_criterion,max_layout_len, num_layers=1, decoder_dropout=0.1,**kwarg):
 
         super(end2endModuleNet, self).__init__()
 
