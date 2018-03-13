@@ -1,15 +1,15 @@
 data:
-    dataset: clevr
-    data_root_dir : /private/home/tinayujiang/data/n2nmn_CLEVR
-    preprocess_model : vgg_pool5
-    vocab_question_file : vocabulary_clevr.txt
+    dataset: vqa
+    data_root_dir : /private/home/tinayujiang/data/n2nmn_vqa
+    preprocess_model : resnet_res5c
+    vocab_question_file : vocabulary_vqa.txt
     vocab_layout_file : vocabulary_layout.txt
-    vocab_answer_file : answers_clevr.txt
+    vocab_answer_file : answers_vqa.txt
     imdb_file_trn : imdb_trn.npy
 
 output:
     root_dir: ~/temp/temp_out
-    exp_name: clevr_scratch 
+    exp_name: vqa_scratch 
 model:
     model_type: scratch
     image_height : 10

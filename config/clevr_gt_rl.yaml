@@ -9,7 +9,7 @@ data:
 
 output:
     root_dir: ~/temp/temp_out
-    exp_name: clevr_gt_layout 
+    exp_name: clevr_gt_rl 
 model:
     model_type: gt+rl
     model_path: 
