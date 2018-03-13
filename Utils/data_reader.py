@@ -7,7 +7,6 @@ import queue
 import numpy as np
 
 from Utils import text_processing
-from test_helper.replace_path import replace_to_my_mac
 
 class BatchLoaderClevr:
     def __init__(self, imdb,image_feat_dir, data_params):
