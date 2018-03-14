@@ -93,65 +93,70 @@ baseline_decay = training_parameters['baseline_decay']
 max_grad_l2_norm = training_parameters['max_grad_l2_norm']
 snapshot_interval = training_parameters['snapshot_interval']
 snapshot_dir = os.path.join(config['output']['root_dir'],"tfmodel",config['output']['exp_name'])
+os.makedirs(snapshot_dir, exist_ok=True)
 
-for i_iter, batch in enumerate(data_reader_trn):
+i_iter = 0
+for iepoch in range(100):
+    print("iepoch = ", iepoch)
     if i_iter >= max_iter:
         break
+    for i, batch in enumerate(data_reader_trn):
+        n_sample,_ = batch['input_seq_batch'].shape
+        input_text_seq_lens = batch['seq_length_batch'].cpu().numpy()
+        input_text_seqs = np.transpose(batch['input_seq_batch'].cpu().numpy())
+        input_layouts = np.transpose(batch['gt_layout_batch'].cpu().numpy())
+        input_images = batch['image_feat_batch'].cpu().numpy()
+        input_answers = batch['answer_label_batch'].cpu().numpy()
 
-    n_sample,_ = batch['input_seq_batch'].shape
-    input_text_seq_lens = batch['seq_length_batch'].cpu().numpy()
-    input_text_seqs = np.transpose(batch['input_seq_batch'].cpu().numpy())
-    input_layouts = np.transpose(batch['gt_layout_batch'].cpu().numpy())
-    input_images = batch['image_feat_batch'].cpu().numpy()
-    input_answers = batch['answer_label_batch'].cpu().numpy()
+        n_correct_layout = 0
+        n_correct_answer = 0
 
-    n_correct_layout = 0
-    n_correct_answer = 0
+        input_txt_variable = Variable(torch.LongTensor(input_text_seqs))
+        input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
 
-    input_txt_variable = Variable(torch.LongTensor(input_text_seqs))
-    input_txt_variable = input_txt_variable.cuda() if use_cuda else input_txt_variable
+        input_layout_variable = None
+        decoder_sampling = True
 
-    input_layout_variable = None
-    decoder_sampling = True
+        if model_type == model_type_gt:
+            decoder_sampling = False
+            input_layout_variable = Variable(torch.LongTensor(input_layouts))
+            input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
 
-    if model_type == model_type_gt:
-        decoder_sampling = False
-        input_layout_variable = Variable(torch.LongTensor(input_layouts))
-        input_layout_variable = input_layout_variable.cuda() if use_cuda else input_layout_variable
+        myOptimizer.zero_grad()
 
-    myOptimizer.zero_grad()
+        total_loss, avg_answer_loss, myAnswer, predicted_layouts, expr_validity_array, updated_baseline \
+            = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
+                      input_answers=input_answers, input_images=input_images, policy_gradient_baseline=updated_baseline,
+                      baseline_decay=baseline_decay, input_layout_variable=input_layout_variable,
+                      sample_token=decoder_sampling
+                      )
 
-    total_loss, avg_answer_loss, myAnswer, predicted_layouts, expr_validity_array, updated_baseline \
-        = myModel(input_txt_variable=input_txt_variable, input_text_seq_lens=input_text_seq_lens,
-                  input_answers=input_answers, input_images=input_images, policy_gradient_baseline=updated_baseline,
-                  baseline_decay=baseline_decay, input_layout_variable=input_layout_variable,
-                  sample_token=decoder_sampling
-                  )
+        if total_loss is not None:
+            total_loss.backward()
+            torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
+            myOptimizer.step()
 
-    if total_loss is not None:
-        total_loss.backward()
-        torch.nn.utils.clip_grad_norm(myModel.parameters(), max_grad_l2_norm)
-        myOptimizer.step()
+        layout_accuracy = np.mean(np.all(predicted_layouts == input_layouts, axis=0))
+        avg_layout_accuracy += (1 - accuracy_decay) * (layout_accuracy - avg_layout_accuracy)
 
-    layout_accuracy = np.mean(np.all(predicted_layouts == input_layouts, axis=0))
-    avg_layout_accuracy += (1 - accuracy_decay) * (layout_accuracy - avg_layout_accuracy)
+        accuracy = np.mean(np.logical_and(expr_validity_array, myAnswer == input_answers))
+        avg_accuracy += (1 - accuracy_decay) * (accuracy - avg_accuracy)
+        validity = np.mean(expr_validity_array)
 
-    accuracy = np.mean(np.logical_and(expr_validity_array, myAnswer == input_answers))
-    avg_accuracy += (1 - accuracy_decay) * (accuracy - avg_accuracy)
-    validity = np.mean(expr_validity_array)
+        if (i_iter + 1) % 20 == 0:
+            print("iter:", i_iter + 1,
+                  " cur_layout_acc:%.3f" % layout_accuracy, " avg_layout_acc:%.3f" % avg_layout_accuracy,
+                  " cur_ans_acc:%.4f" % accuracy, " avg_answer_acc:%.4f" % avg_accuracy,
+                  "total loss:%.4f" % total_loss.data.cpu().numpy()[0],
+                  "avg_answer_loss:%.4f" % avg_answer_loss.data.cpu().numpy()[0])
 
-    if (i_iter + 1) % 20 == 0:
-        print("iter:", i_iter + 1,
-              " cur_layout_acc:%.3f" % layout_accuracy, " avg_layout_acc:%.3f" % avg_layout_accuracy,
-              " cur_ans_acc:%.4f" % accuracy, " avg_answer_acc:%.4f" % avg_accuracy,
-              "total loss:%.4f" % total_loss.data.cpu().numpy()[0],
-              "avg_answer_loss:%.4f" % avg_answer_loss.data.cpu().numpy()[0])
+            sys.stdout.flush()
 
-        sys.stdout.flush()
+        # Save snapshot
+        if (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
+            model_snapshot_file = os.path.join(snapshot_dir, "model_%08d" % (i_iter + 1))
+            torch.save(myModel, model_snapshot_file)
+            print('snapshot saved to ' + model_snapshot_file)
+            sys.stdout.flush()
+        i_iter += 1
 
-    # Save snapshot
-    if (i_iter + 1) % snapshot_interval == 0 or (i_iter + 1) == max_iter:
-        model_snapshot_file = os.path.join(snapshot_dir, "model_%08d" % (i_iter + 1))
-        torch.save(myModel, model_snapshot_file)
-        print('snapshot saved to ' + model_snapshot_file)
-        sys.stdout.flush()
