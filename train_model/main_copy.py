@@ -7,6 +7,8 @@ from models.custom_loss import custom_loss
 from global_variables.global_variables import *
 from Utils.data_reader import DataReader
 from torch import optim
+from Utils.dataSet import vqa_dataset
+from torch.utils.data import DataLoader
 
 
 
@@ -22,6 +24,7 @@ with open(config_file, 'r') as f:
     config = yaml.load(f)
 
 torch.manual_seed(1)
+
 ##update config file with commandline arguments
 
 
@@ -37,19 +40,21 @@ def prepare_train_data_set(**data_cofig):
     N = data_cofig['N']
     T_encoder = data_cofig['T_encoder']
     T_decoder = data_cofig['T_decoder']
+    image_depth_first = data_cofig['image_depth_first']
 
-    data_reader_trn = DataReader(imdb_file_trn, image_feat_dir, shuffle=False, one_pass=True,
-                                 batch_size=N,
-                                 T_encoder=T_encoder,
-                                 T_decoder=T_decoder,
-                                 assembler=assembler,
-                                 vocab_question_file=vocab_question_file,
-                                 vocab_answer_file=vocab_answer_file,
-                                 prune_filter_module=prune_filter_module)
+    vqa_train_dataset = vqa_dataset(imdb_file=imdb_file_trn, image_feat_directory=image_feat_dir, T_encoder=T_encoder,
+                                    T_decoder=T_decoder,
+                                    assembler=assembler,
+                                    vocab_question_file=vocab_question_file,
+                                    vocab_answer_file=vocab_answer_file,
+                                    prune_filter_module=prune_filter_module,
+                                    image_depth_first=image_depth_first)
 
-    num_vocab_txt = data_reader_trn.batch_loader.vocab_dict.num_vocab
+    data_reader_trn = DataLoader(dataset=vqa_train_dataset, batch_size=N, shuffle=True)
+
+    num_vocab_txt = vqa_train_dataset.vocab_dict.num_vocab
     num_vocab_nmn = len(assembler.module_names)
-    num_choices = data_reader_trn.batch_loader.answer_dict.num_vocab
+    num_choices = vqa_train_dataset.answer_dict.num_vocab
 
     return data_reader_trn, num_vocab_txt, num_choices,num_vocab_nmn, assembler
 
@@ -58,14 +63,6 @@ def prepare_model(num_vocab_txt, num_choices, num_vocab_nmn,assembler, **model_c
     if model_config['model_type'] == model_type_gt_rl:
         myModel = torch.load(model_config['model_path'])
     else:
-        '''myModel = end2endModuleNet(num_vocab_txt=num_vocab_txt, num_vocab_nmn=num_vocab_nmn,
-                                   out_num_choices=num_choices,
-                                   embed_dim_nmn=embed_dim_nmn, embed_dim_txt=embed_dim_txt,
-                                   image_height=H_feat, image_width=W_feat, in_image_dim=D_feat,
-                                   hidden_size=lstm_dim, assembler=assembler, layout_criterion=criterion_layout,
-                                   max_layout_len=T_decoder,
-                                   answer_criterion=criterion_answer, num_layers=num_layers, decoder_dropout=0)'''
-
         criterion_layout = custom_loss(lambda_entropy= model_config['lambda_entropy'])
         criterion_answer = nn.CrossEntropyLoss(size_average=False, reduce=False)
 
@@ -97,24 +94,16 @@ max_grad_l2_norm = training_parameters['max_grad_l2_norm']
 snapshot_interval = training_parameters['snapshot_interval']
 snapshot_dir = os.path.join(config['output']['root_dir'],"tfmodel",config['output']['exp_name'])
 
-for i_iter, batch in enumerate(data_reader_trn.batches()):
+for i_iter, batch in enumerate(data_reader_trn):
     if i_iter >= max_iter:
         break
 
-    _, n_sample = batch['input_seq_batch'].shape
-    input_text_seq_lens = batch['seq_length_batch']
-    input_text_seqs = batch['input_seq_batch']
-    input_layouts = batch['gt_layout_batch']
-    input_images = batch['image_feat_batch']
-    input_answers = batch['answer_label_batch']
-
-    np.savetxt("/private/home/tinayujiang/temp/temp_out/input_text_seqs.txt",input_text_seqs)
-    np.savetxt("/private/home/tinayujiang/temp/temp_out/input_layouts.txt", input_layouts)
-    #np.savetxt("/private/home/tinayujiang/temp/temp_out/input_images.txt", input_images[0,:,:])
-    np.savetxt("/private/home/tinayujiang/temp/temp_out/input_answers.txt", input_answers)
-
-
-
+    n_sample,_ = batch['input_seq_batch'].shape
+    input_text_seq_lens = batch['seq_length_batch'].cpu().numpy()
+    input_text_seqs = np.transpose(batch['input_seq_batch'].cpu().numpy())
+    input_layouts = np.transpose(batch['gt_layout_batch'].cpu().numpy())
+    input_images = batch['image_feat_batch'].cpu().numpy()
+    input_answers = batch['answer_label_batch'].cpu().numpy()
 
     n_correct_layout = 0
     n_correct_answer = 0
@@ -151,7 +140,7 @@ for i_iter, batch in enumerate(data_reader_trn.batches()):
     avg_accuracy += (1 - accuracy_decay) * (accuracy - avg_accuracy)
     validity = np.mean(expr_validity_array)
 
-    if (i_iter + 1) % 100 == 0:
+    if (i_iter + 1) % 20 == 0:
         print("iter:", i_iter + 1,
               " cur_layout_acc:%.3f" % layout_accuracy, " avg_layout_acc:%.3f" % avg_layout_accuracy,
               " cur_ans_acc:%.4f" % accuracy, " avg_answer_acc:%.4f" % avg_accuracy,

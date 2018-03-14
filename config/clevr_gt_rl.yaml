@@ -6,6 +6,7 @@ data:
     vocab_layout_file : vocabulary_layout.txt
     vocab_answer_file : answers_clevr.txt
     imdb_file_trn : imdb_trn.npy
+    image_depth_first: True
 
 output:
     root_dir: ~/temp/temp_out

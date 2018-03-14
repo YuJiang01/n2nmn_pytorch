@@ -1,30 +1,29 @@
 data:
-    dataset: clevr
-    data_root_dir : /private/home/tinayujiang/data/n2nmn_CLEVR
-    preprocess_model : vgg_pool5
-    vocab_question_file : vocabulary_clevr.txt
+    dataset: vqa
+    data_root_dir : /private/home/tinayujiang/data/n2nmn_vqa
+    preprocess_model : resnet_res5c
+    vocab_question_file : vocabulary_vqa.txt
     vocab_layout_file : vocabulary_layout.txt
-    vocab_answer_file : answers_clevr.txt
+    vocab_answer_file : answers_vqa.txt
     imdb_file_trn : imdb_trn.npy
-    image_depth_first: True
-
+    image_depth_first: False
 output:
     root_dir: ~/temp/temp_out
-    exp_name: clevr_gt_layout 
+    exp_name: vga_gt_layout
 model:
     model_type: gt_layout
-    image_height : 10
-    image_width : 15
-    in_image_dim : 512
+    image_height : 14
+    image_width : 14
+    in_image_dim : 2048
     embed_dim_txt : 300
     embed_dim_nmn : 300
-    hidden_size : 512
+    hidden_size : 1000
     num_layers : 2
-    encoder_dropout : 0
-    decoder_dropout : 0
-    decoder_sampling : True
-    T_encoder : 45
-    T_decoder : 10
+    encoder_dropout : 0.1
+    decoder_dropout : 0.1
+    decoder_sampling : False
+    T_encoder : 26
+    T_decoder : 13
     N : 64
     lambda_entropy : 0
     prune_filter_module : True
@@ -40,7 +39,7 @@ training_parameters:
     max_grad_l2_norm: 10
     learning_rate : 0.001
 
-    
-    
-    
-    
+
+
+
+

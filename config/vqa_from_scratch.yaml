@@ -6,24 +6,24 @@ data:
     vocab_layout_file : vocabulary_layout.txt
     vocab_answer_file : answers_vqa.txt
     imdb_file_trn : imdb_trn.npy
-
+    image_depth_first: False
 output:
     root_dir: ~/temp/temp_out
     exp_name: vqa_scratch 
 model:
     model_type: scratch
-    image_height : 10
-    image_width : 15
-    in_image_dim : 512
+    image_height : 14
+    image_width : 14
+    in_image_dim : 2048
     embed_dim_txt : 300
     embed_dim_nmn : 300
-    hidden_size : 512
+    hidden_size : 1000
     num_layers : 2
-    encoder_dropout : 0
-    decoder_dropout : 0
+    encoder_dropout : 0.1
+    decoder_dropout : 0.1
     decoder_sampling : True
-    T_encoder : 45
-    T_decoder : 10
+    T_encoder : 26
+    T_decoder : 13
     N : 64
     lambda_entropy : 0.01
     prune_filter_module : True
