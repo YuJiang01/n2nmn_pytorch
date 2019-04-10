@@ -114,14 +114,14 @@ class AndModule(nn.Module):
         super(AndModule,self).__init__()
 
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        return torch.max(input_image_attention1, input_image_attention2)
+        return torch.min(input_image_attention1, input_image_attention2)
 
 
 class OrModule(nn.Module):
     def __init__(self):
         super(OrModule,self).__init__()
     def forward(self, input_image_feat, input_text, input_image_attention1=None, input_image_attention2=None):
-        return torch.min(input_image_attention1, input_image_attention2)
+        return torch.max(input_image_attention1, input_image_attention2)
 
 
 
